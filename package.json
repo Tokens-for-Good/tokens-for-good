@@ -11,9 +11,17 @@
     "start": "node src/mcp-server.js",
     "test": "node --test src/**/*.test.js"
   },
-  "keywords": ["mcp", "philanthropy", "nonprofit", "research", "tokens", "social-impact"],
+  "keywords": [
+    "mcp",
+    "philanthropy",
+    "nonprofit",
+    "research",
+    "tokens",
+    "social-impact"
+  ],
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0"
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^4.3.6"
   }
 }
