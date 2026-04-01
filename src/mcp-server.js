@@ -29,6 +29,100 @@ const server = new McpServer({
   version: '0.1.0',
 });
 
+// --- No-key onboarding message ---
+
+const NO_KEY_INSTRUCTIONS = `This user has installed the Tokens for Good MCP server but hasn't set up their API key yet.
+
+Walk them through setup:
+
+1. **Create an account:** Go to https://fierce-philanthropy-directory.laravel.cloud/contribute and click "Sign up with GitHub" (one click, free).
+
+2. **Copy the API key:** After signing up, they'll see an API key starting with \`fp_live_\`. Copy it immediately -- it's only shown once.
+
+3. **Add the key to their MCP config:** Update their tokens-for-good MCP configuration to include the key as an environment variable:
+
+For Claude Code (.mcp.json or settings.json):
+\`\`\`json
+{
+  "mcpServers": {
+    "tokens-for-good": {
+      "command": "npx",
+      "args": ["-y", "tokens-for-good", "--mcp"],
+      "env": { "FIERCE_API_KEY": "fp_live_their_key_here" }
+    }
+  }
+}
+\`\`\`
+
+For Opencode (opencode.json):
+\`\`\`json
+{
+  "mcp": {
+    "tokens-for-good": {
+      "type": "local",
+      "command": ["npx", "-y", "tokens-for-good", "--mcp"],
+      "environment": { "FIERCE_API_KEY": "fp_live_their_key_here" }
+    }
+  }
+}
+\`\`\`
+
+For Cursor (.cursor/mcp.json):
+\`\`\`json
+{
+  "mcpServers": {
+    "tokens-for-good": {
+      "command": "npx",
+      "args": ["-y", "tokens-for-good", "--mcp"],
+      "env": { "FIERCE_API_KEY": "fp_live_their_key_here" }
+    }
+  }
+}
+\`\`\`
+
+4. **Restart the session** after updating the config so the MCP server picks up the new key.
+
+5. **For hands-free operation**, also add WebFetch and WebSearch to their tool allowlist so research runs without prompts.
+
+Once set up, they can say "Research an org for Fierce Philanthropy" and the AI does the rest. Each org takes ~5 minutes and costs ~$0.20 in tokens.
+
+**What is Tokens for Good?**
+Tokens for Good lets developers donate their spare AI subscription tokens to research nonprofit organizations for Fierce Philanthropy's social impact directory. It's like Folding@Home but for AI tokens -- crowdsourced compute for social good. Contributors get credit on a public leaderboard and on the org pages they research.`;
+
+// --- Resources ---
+
+server.resource('about', 'tokens-for-good://about', 'text/plain', async () => ({
+  contents: [{
+    uri: 'tokens-for-good://about',
+    text: `Tokens for Good - Donate Your Spare AI Tokens to Research Nonprofits
+
+What: An MCP server that lets AI coding tool users (Claude Code, Opencode, Cursor, Windsurf, Devin) contribute their spare subscription tokens to research nonprofit organizations for Fierce Philanthropy's social impact directory.
+
+How it works:
+1. Sign up at https://fierce-philanthropy-directory.laravel.cloud/contribute (GitHub OAuth)
+2. Get your API key, add it to your MCP config as FIERCE_API_KEY
+3. Say "Research an org for Fierce Philanthropy"
+4. Your AI claims an org, researches it (web search + analysis), verifies citations, humanizes the writing, and submits the report
+5. Another contributor's AI peer-reviews your report
+6. A human reviewer finalizes it for the directory
+
+Research pipeline (3 steps per org, all done by your AI):
+- Step 1: Research -- web search, 6-prompt methodology, scored checklist (100 pts)
+- Step 2: Verify -- check every citation URL, flag hallucinations, correct errors
+- Step 3: Humanize -- 9-pass AI decontamination (remove em dashes, filler adjectives, vary rhythm, inject analyst voice)
+
+Contributor tiers:
+- New: first 5 orgs, easy orgs only
+- Bronze: 5+ orgs
+- Silver: 25+ orgs, >80% acceptance rate
+- Gold: 100+ orgs, >90% acceptance rate
+
+Automation: On Claude Code, use /schedule to auto-contribute daily. On Opencode, set up a system cron. On Cursor/Windsurf, contribute manually when prompted.
+
+Cost: ~$0.15-0.25 per org in tokens. Scale: 750K+ US nonprofits to research.`,
+  }],
+}));
+
 // --- Tools ---
 
 server.tool('claim_org', 'Claim the next available nonprofit org to research. Blocked if you have a pending peer review.', {
@@ -148,6 +242,10 @@ server.tool('my_impact', 'See your personal contribution stats, tier, and histor
   }
 });
 
+server.tool('setup_guide', 'Get setup instructions for Tokens for Good. Use this if the user needs help with installation, API keys, or configuration.', {}, async () => {
+  return { content: [{ type: 'text', text: NO_KEY_INSTRUCTIONS }] };
+});
+
 server.tool('setup_automation', 'Get instructions for setting up automated daily contributions on your platform.', {
   frequency: z.enum(['hourly', 'daily', 'weekly']).optional().describe('How often to contribute'),
 }, async ({ frequency }) => {
@@ -158,6 +256,16 @@ server.tool('setup_automation', 'Get instructions for setting up automated daily
 // --- Prompts (session start) ---
 
 server.prompt('session_start', 'Check if you should research an org or complete a peer review', {}, async () => {
+  // No API key -- guide through setup
+  if (!client) {
+    return {
+      messages: [{
+        role: 'user',
+        content: { type: 'text', text: NO_KEY_INSTRUCTIONS },
+      }],
+    };
+  }
+
   const state = loadState();
 
   // Check for pending peer review first
