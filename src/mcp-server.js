@@ -12,7 +12,7 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PIPELINE_DIR = join(__dirname, '..', 'pipeline');
 
-const apiKey = process.env.FIERCE_API_KEY;
+const apiKey = process.env.TFG_API_KEY;
 let client;
 try {
   client = new ApiClient(apiKey);
@@ -37,7 +37,7 @@ Walk them through setup:
 
 1. **Create an account:** Go to https://fierce-philanthropy-directory.laravel.cloud/contribute and click "Sign up with GitHub" (one click, free).
 
-2. **Copy the API key:** After signing up, they'll see an API key starting with \`fp_live_\`. Copy it immediately -- it's only shown once.
+2. **Copy the API key:** After signing up, they'll see an API key starting with \`tfg_live_\`. Copy it immediately -- it's only shown once.
 
 3. **Add the key to their MCP config:** Update their tokens-for-good MCP configuration to include the key as an environment variable:
 
@@ -48,7 +48,7 @@ For Claude Code (.mcp.json or settings.json):
     "tokens-for-good": {
       "command": "npx",
       "args": ["-y", "tokens-for-good", "--mcp"],
-      "env": { "FIERCE_API_KEY": "fp_live_their_key_here" }
+      "env": { "TFG_API_KEY": "tfg_live_their_key_here" }
     }
   }
 }
@@ -61,7 +61,7 @@ For Opencode (opencode.json):
     "tokens-for-good": {
       "type": "local",
       "command": ["npx", "-y", "tokens-for-good", "--mcp"],
-      "environment": { "FIERCE_API_KEY": "fp_live_their_key_here" }
+      "environment": { "TFG_API_KEY": "tfg_live_their_key_here" }
     }
   }
 }
@@ -74,7 +74,7 @@ For Cursor (.cursor/mcp.json):
     "tokens-for-good": {
       "command": "npx",
       "args": ["-y", "tokens-for-good", "--mcp"],
-      "env": { "FIERCE_API_KEY": "fp_live_their_key_here" }
+      "env": { "TFG_API_KEY": "tfg_live_their_key_here" }
     }
   }
 }
@@ -100,7 +100,7 @@ What: An MCP server that lets AI coding tool users (Claude Code, Opencode, Curso
 
 How it works:
 1. Sign up at https://fierce-philanthropy-directory.laravel.cloud/contribute (GitHub OAuth)
-2. Get your API key, add it to your MCP config as FIERCE_API_KEY
+2. Get your API key, add it to your MCP config as TFG_API_KEY
 3. Say "Research an org for Fierce Philanthropy"
 4. Your AI claims an org, researches it (web search + analysis), verifies citations, humanizes the writing, and submits the report
 5. Another contributor's AI peer-reviews your report
@@ -128,7 +128,7 @@ Cost: ~$0.15-0.25 per org in tokens. Scale: 750K+ US nonprofits to research.`,
 server.tool('claim_org', 'Claim the next available nonprofit org to research. Blocked if you have a pending peer review.', {
   platform: z.string().optional().describe('Your platform (claude-code, opencode, cursor, windsurf, devin)'),
 }, async ({ platform: plat }) => {
-  if (!client) return { content: [{ type: 'text', text: 'Error: FIERCE_API_KEY not set. Get your key at https://fierce-philanthropy-directory.laravel.cloud/contribute' }] };
+  if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set. Get your key at https://fierce-philanthropy-directory.laravel.cloud/contribute' }] };
 
   try {
     const result = await client.claimOrg(plat || platform);
@@ -163,7 +163,7 @@ server.tool('submit_report', 'Submit a completed research report for an org you 
   report_markdown: z.string().describe('The full research report in markdown'),
   model_used: z.string().optional().describe('The model that generated this report'),
 }, async ({ claim_id, report_markdown, model_used }) => {
-  if (!client) return { content: [{ type: 'text', text: 'Error: FIERCE_API_KEY not set.' }] };
+  if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
 
   try {
     const result = await client.submitReport(claim_id, report_markdown, null, null, model_used);
@@ -177,7 +177,7 @@ server.tool('submit_report', 'Submit a completed research report for an org you 
 });
 
 server.tool('get_peer_review', 'Get a draft report assigned to you for peer review. You must complete peer reviews before claiming new orgs.', {}, async () => {
-  if (!client) return { content: [{ type: 'text', text: 'Error: FIERCE_API_KEY not set.' }] };
+  if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
 
   try {
     const result = await client.getNextPeerReview();
@@ -198,7 +198,7 @@ server.tool('submit_peer_review', 'Submit your peer review score for a report.',
   notes: z.string().optional().describe('Review notes explaining the score'),
   updated_report: z.string().optional().describe('If score is 3, the fixed version of the report'),
 }, async ({ claim_id, score, notes, updated_report }) => {
-  if (!client) return { content: [{ type: 'text', text: 'Error: FIERCE_API_KEY not set.' }] };
+  if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
 
   try {
     const result = await client.submitPeerReview(claim_id, score, notes, updated_report);
@@ -227,7 +227,7 @@ server.tool('research_status', 'See the overall Tokens for Good project progress
 });
 
 server.tool('my_impact', 'See your personal contribution stats, tier, and history.', {}, async () => {
-  if (!client) return { content: [{ type: 'text', text: 'Error: FIERCE_API_KEY not set.' }] };
+  if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
 
   try {
     const result = await client.getImpact();

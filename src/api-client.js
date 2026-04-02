@@ -6,7 +6,7 @@ export class ApiClient {
   constructor(apiKey) {
     this.apiKey = apiKey;
     if (!apiKey) {
-      throw new Error('FIERCE_API_KEY environment variable is required. Get your key at https://fierce-philanthropy-directory.laravel.cloud/contribute');
+      throw new Error('TFG_API_KEY environment variable is required. Get your key at https://fierce-philanthropy-directory.laravel.cloud/contribute');
     }
   }
 
@@ -15,7 +15,7 @@ export class ApiClient {
     const options = {
       method,
       headers: {
-        'X-Fierce-Api-Key': this.apiKey,
+        'X-TFG-Api-Key': this.apiKey,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },

@@ -11,7 +11,7 @@ const args = process.argv.slice(2);
 if (args.includes('--status')) {
   const { ApiClient } = await import('./api-client.js');
   try {
-    const client = new ApiClient(process.env.FIERCE_API_KEY || 'public');
+    const client = new ApiClient(process.env.TFG_API_KEY || 'public');
     const status = await client.getStatus();
     console.log('\nTokens for Good - Project Status\n');
     console.log(`Total orgs: ${status.total_orgs}`);
@@ -31,7 +31,7 @@ if (args.includes('--status')) {
 } else if (args.includes('--impact')) {
   const { ApiClient } = await import('./api-client.js');
   try {
-    const client = new ApiClient(process.env.FIERCE_API_KEY);
+    const client = new ApiClient(process.env.TFG_API_KEY);
     const result = await client.getImpact();
     const c = result.contributor;
     console.log(`\nYour Impact (@${c.github_handle})\n`);
