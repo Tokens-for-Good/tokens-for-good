@@ -26,7 +26,7 @@ updateState({ platform });
 
 const server = new McpServer({
   name: 'tokens-for-good',
-  version: '0.1.0',
+  version: '0.1.1',
 });
 
 // --- No-key onboarding message ---
@@ -41,7 +41,7 @@ Walk them through setup:
 
 3. **Add the key to their MCP config:** Update their tokens-for-good MCP configuration to include the key as an environment variable:
 
-For Claude Code (.mcp.json or settings.json):
+For Claude Code (create \`.mcp.json\` in your project root or home directory):
 \`\`\`json
 {
   "mcpServers": {
@@ -67,7 +67,7 @@ For Opencode (opencode.json):
 }
 \`\`\`
 
-For Cursor (.cursor/mcp.json):
+For Cursor (\`.cursor/mcp.json\` in your project root):
 \`\`\`json
 {
   "mcpServers": {
@@ -80,9 +80,13 @@ For Cursor (.cursor/mcp.json):
 }
 \`\`\`
 
-4. **Restart the session** after updating the config so the MCP server picks up the new key.
+**Important:** Do NOT put MCP config in \`~/.claude/settings.json\` — Claude Code ignores MCP servers there. The \`.mcp.json\` file must be in your project root or home directory.
 
-5. **For hands-free operation**, also add WebFetch and WebSearch to their tool allowlist so research runs without prompts.
+4. **Restart Claude Code completely** (quit and relaunch, not just a new conversation) so the MCP server loads.
+
+5. **Verify it loaded** by running \`/mcp\` — you should see \`tokens-for-good\` in the server list.
+
+6. **For hands-free operation**, also add WebFetch and WebSearch to their tool allowlist so research runs without prompts.
 
 Once set up, they can say "Research an org for Fierce Philanthropy" and the AI does the rest. Each org takes ~5 minutes and costs ~$0.20 in tokens.
 
