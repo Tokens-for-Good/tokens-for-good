@@ -26,7 +26,7 @@ updateState({ platform });
 
 const server = new McpServer({
   name: 'tokens-for-good',
-  version: '0.1.1',
+  version: '0.1.2',
 });
 
 // --- No-key onboarding message ---
@@ -172,9 +172,21 @@ server.tool('submit_report', 'Submit a completed research report for an org you 
   try {
     const result = await client.submitReport(claim_id, report_markdown, null, null, model_used);
     markContributed();
-    return {
-      content: [{ type: 'text', text: `Report submitted for ${result.org_name}!\n\nYour stats:\n- Total orgs: ${result.contributor_stats.total_orgs}\n- Tier: ${result.contributor_stats.tier}\n- Orgs remaining: ${result.orgs_remaining}\n\nYour report will now go through peer review. Thank you for contributing!` }],
-    };
+    const state = loadState();
+    const stats = result.contributor_stats;
+
+    let message = `Report submitted for ${result.org_name}!\n\nYour stats:\n- Total orgs: ${stats.total_orgs}\n- Tier: ${stats.tier}\n- Orgs remaining: ${result.orgs_remaining}\n\nYour report will now go through peer review. Thank you for contributing!`;
+
+    // Nudge to set up automation if they haven't already
+    if (!state.auto_schedule) {
+      if (isSchedulable(platform)) {
+        message += `\n\n---\n\nWant to make this automatic? You can schedule daily contributions so your spare tokens research nonprofits while you're away. Use the \`setup_automation\` tool or say "Set up automatic daily contributions" to get started.`;
+      } else {
+        message += `\n\n---\n\nWant to contribute regularly? You can set up a system cron to research an org automatically each day. Use the \`setup_automation\` tool to get instructions for your platform.`;
+      }
+    }
+
+    return { content: [{ type: 'text', text: message }] };
   } catch (err) {
     return { content: [{ type: 'text', text: `Submit error: ${err.message}${err.data?.validation_errors ? '\n' + err.data.validation_errors.join('\n') : ''}` }] };
   }
