@@ -120,7 +120,9 @@ Keep the table with ALL previous columns intact. For each of the 20 negative con
 
 **Section 1 — Our Recommendation**
 
-Write a recommendation paragraph (2-4 sentences), then include this exact scored checklist using [x] or [ ]. The score is out of 100 points:
+Write a recommendation paragraph (2-4 sentences), then include this EXACT scored checklist using [x] or [ ]. The score is out of 100 points.
+
+**IMPORTANT: Use EXACTLY these 6 criteria with EXACTLY these names and point values. Do NOT use the old 7-point checklist (a-g with "Understands the Social Issue" etc.) — that format is deprecated. There are exactly 6 items (a-f), not 7.**
 
 - [x] or [ ] a. Has Ultimate Outcome Goals (50 pts)
 - [x] or [ ] b. Measures Intermediate Outcomes (5 pts)
@@ -129,7 +131,7 @@ Write a recommendation paragraph (2-4 sentences), then include this exact scored
 - [x] or [ ] e. Measures Ultimate Counterfactuals (20 pts)
 - [x] or [ ] f. Shows Continual Learning & Adaptation (5 pts)
 
-**Score: [X]/100** (sum of checked items)
+**Score: [X]/100** (sum of checked items' point values only — do NOT count unchecked items)
 
 **Section 2 — The Social Problem**
 Describe the social problem the organization is trying to solve. Include scale (how many affected, what geographies). Cite sources for prevalence data.
