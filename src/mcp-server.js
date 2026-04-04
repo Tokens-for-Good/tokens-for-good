@@ -26,7 +26,7 @@ updateState({ platform });
 
 const server = new McpServer({
   name: 'tokens-for-good',
-  version: '0.1.3',
+  version: '0.1.4',
 });
 
 // --- No-key onboarding message ---
@@ -86,13 +86,7 @@ For Cursor (\`.cursor/mcp.json\` in your project root):
 
 5. **Verify it loaded** by running \`/mcp\` — you should see \`tokens-for-good\` in the server list.
 
-6. **Required for hands-free operation:** Add WebFetch and WebSearch to the tool allowlist so research runs without permission prompts. In Claude Code, run:
-
-\`\`\`
-/permissions
-\`\`\`
-
-Then add \`WebFetch\` and \`WebSearch\` to the allow list. Without this, every web request will pause for approval and the research won't complete unattended.
+6. **Set up permissions for hands-free research:** After restarting, use the \`check_permissions\` tool to verify WebFetch and WebSearch are in the allowlist, and offer to add them if not. Without these permissions, every web request will pause for approval and the research won't complete unattended.
 
 Once set up, they can say "Research an org for Fierce Philanthropy" and the AI does the rest. Each org takes ~5 minutes and costs ~$0.20 in tokens.
 
@@ -268,6 +262,36 @@ server.tool('setup_guide', 'Get setup instructions for Tokens for Good. Use this
   return { content: [{ type: 'text', text: NO_KEY_INSTRUCTIONS }] };
 });
 
+server.tool('check_permissions', 'Check if WebFetch and WebSearch are in the tool allowlist. If not, offer to add them. Call this after setup or before first research run.', {}, async () => {
+  // We can't read the settings file directly, but we can tell the AI what to do
+  return {
+    content: [{ type: 'text', text: `Check if this user's Claude Code has WebFetch and WebSearch in their tool allowlist. To do this:
+
+1. Read the file ~/.claude/settings.json
+2. Look for the "permissions.allow" array
+3. Check if it contains "WebFetch" and "WebSearch"
+
+If BOTH are already present, tell the user they're all set for hands-free research.
+
+If one or both are MISSING, explain:
+"Tokens for Good needs WebFetch and WebSearch permissions to research nonprofits without pausing for approval on every web request. Can I add them to your allowlist?"
+
+If they agree, edit ~/.claude/settings.json to add the missing entries to the "permissions.allow" array. For example:
+{
+  "permissions": {
+    "allow": [
+      "WebFetch",
+      "WebSearch"
+    ]
+  }
+}
+
+Merge with any existing entries — don't overwrite other allowed tools.
+
+After adding, tell them: "Done! Research will now run hands-free. Try saying 'Research an org for Fierce Philanthropy' to get started."` }],
+  };
+});
+
 server.tool('setup_automation', 'Get instructions for setting up automated daily contributions on your platform.', {
   frequency: z.enum(['hourly', 'daily', 'weekly']).optional().describe('How often to contribute'),
 }, async ({ frequency }) => {
@@ -328,19 +352,24 @@ server.prompt('session_start', 'Check if you should research an org or complete 
     return { messages: [{ role: 'user', content: { type: 'text', text: 'Tokens for Good: You already contributed today. Nice work!' } }] };
   }
 
+  // Check permissions before first research
+  const permNote = state.total_session_contributions === 0
+    ? `\n\n**First time?** Before researching, use the \`check_permissions\` tool to make sure WebFetch and WebSearch are allowed — otherwise you'll get prompted for every web request.`
+    : '';
+
   // Show the session start prompt
   if (isSchedulable(platform)) {
     return {
       messages: [{
         role: 'user',
-        content: { type: 'text', text: `Tokens for Good: Would you like to donate your spare tokens to research a nonprofit today?\n\n1. Set up automatic daily contributions (recommended)\n2. Just run one now\n3. Ask me tomorrow\n4. Ask me in a week\n\nUse setup_automation for option 1, claim_org for option 2.` },
+        content: { type: 'text', text: `Tokens for Good: Would you like to donate your spare tokens to research a nonprofit today?\n\n1. Set up automatic daily contributions (recommended)\n2. Just run one now\n3. Ask me tomorrow\n4. Ask me in a week\n\nUse setup_automation for option 1, claim_org for option 2.${permNote}` },
       }],
     };
   } else {
     return {
       messages: [{
         role: 'user',
-        content: { type: 'text', text: `Tokens for Good: Would you like to research a nonprofit org today? It takes about 5 minutes and costs ~$0.20 in tokens.\n\n1. Research an org now\n2. Ask me tomorrow\n3. Ask me in a week\n\nUse claim_org for option 1.` },
+        content: { type: 'text', text: `Tokens for Good: Would you like to research a nonprofit org today? It takes about 5 minutes and costs ~$0.20 in tokens.\n\n1. Research an org now\n2. Ask me tomorrow\n3. Ask me in a week\n\nUse claim_org for option 1.${permNote}` },
       }],
     };
   }
