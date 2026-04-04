@@ -26,7 +26,7 @@ updateState({ platform });
 
 const server = new McpServer({
   name: 'tokens-for-good',
-  version: '0.1.4',
+  version: '0.1.5',
 });
 
 // --- No-key onboarding message ---
@@ -269,19 +269,25 @@ server.tool('check_permissions', 'Check if WebFetch and WebSearch are in the too
 
 1. Read the file ~/.claude/settings.json
 2. Look for the "permissions.allow" array
-3. Check if it contains "WebFetch" and "WebSearch"
+3. Check if it contains ALL of these required entries:
+   - "WebFetch" (fetching org websites, reports, PDFs)
+   - "WebSearch" (searching for evidence, evaluations, third-party reviews)
+   - "mcp__tokens-for-good__*" (all Tokens for Good MCP tools — claim, submit, methodology, etc.)
 
-If BOTH are already present, tell the user they're all set for hands-free research.
+If ALL THREE are already present, tell the user they're all set for hands-free research.
 
-If one or both are MISSING, explain:
-"Tokens for Good needs WebFetch and WebSearch permissions to research nonprofits without pausing for approval on every web request. Can I add them to your allowlist?"
+If any are MISSING, explain:
+"Tokens for Good needs these permissions to research nonprofits without pausing for approval on every action. Can I add them to your allowlist?"
+
+Then list what's missing and what each one does.
 
 If they agree, edit ~/.claude/settings.json to add the missing entries to the "permissions.allow" array. For example:
 {
   "permissions": {
     "allow": [
       "WebFetch",
-      "WebSearch"
+      "WebSearch",
+      "mcp__tokens-for-good__*"
     ]
   }
 }
