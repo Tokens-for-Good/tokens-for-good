@@ -42,7 +42,7 @@ Find the org in `orgs.json` by name. Extract:
 
 ### 2. Research the Organization
 
-Using the **WebSearch** and **WebFetch** tools, thoroughly research the organization. Do NOT use curl, wget, or Bash commands for web requests — always use the built-in WebSearch and WebFetch tools so the research runs without permission prompts. Search for:
+Using **WebSearch** and **WebFetch** tools, thoroughly research the organization. Search for:
 
 1. The organization's main website — read the homepage, about page, and impact/results pages
 2. Their impact/results/evidence pages — look for published data, annual reports, metrics
@@ -51,11 +51,8 @@ Using the **WebSearch** and **WebFetch** tools, thoroughly research the organiza
 5. Financial data — ProPublica Nonprofit Explorer (search by EIN or org name), Form 990 data
 
 **Research rules:**
-- Only share DIRECT results from the organization, not from other similar orgs
-- Only share direct results on outside measurements of the organization
-- Do not include evidence from modeling or from other organizations
-- Don't include anecdotes — only measured results
-- Every factual claim must be traceable to a specific source
+- Only direct results from this organization and independent measurements of it
+- Only measured results with citations — every factual claim traces to a specific source
 
 ### 3. Generate the Report
 
@@ -100,21 +97,16 @@ Sort by Intermediary first, then Ultimate.
 Keep the table with all columns. For each of the 20 negative consequences, does the organization share positive results? Add a new column with DETAILED answers.
 - Start each cell with "Yes.", "Partial.", or "No direct results shared."
 - When Yes or Partial, provide SPECIFIC data: percentages, numbers, study names, sample sizes, time periods
-- Only share DIRECT results from this organization, not indirect results
-- Access the org's website, PDFs, reports, graphics, annual reports
-- Do NOT include evidence from other organizations or modeling
-- Don't include anecdotes — only measured results
-- **CITATIONS REQUIRED:** Every data point, statistic, and result MUST include an inline citation with URL in format `[Source Name](URL)`
+- Search the org's website, PDFs, reports, annual reports for evidence
+- Every data point must include an inline citation: `[Source Name](URL)`
 
 #### PROMPT 5 — Counterfactual Results
 
 Keep the table with ALL previous columns intact. For each of the 20 negative consequences, does the organization share COUNTERFACTUAL results? Add a new column with DETAILED answers.
 - Start each cell with "Yes.", "Partial.", or "No counterfactual results."
-- When Yes or Partial, describe the study design (RCT, quasi-experimental, matched comparison), sample sizes, confidence intervals, and what the control/comparison group showed
-- Only share direct counterfactual results from this organization
-- Do not include evidence from modeling, similar organizations, or external benchmarks
-- Counterfactual = comparison to what would have happened without the intervention (RCT, quasi-experimental, matched comparison, waitlist control, etc.)
-- **CITATIONS REQUIRED:** Every data point, study reference, and counterfactual result MUST include an inline citation with URL in format `[Source Name](URL)`
+- When Yes or Partial, describe the study design (RCT, quasi-experimental, matched comparison), sample sizes, confidence intervals, and control/comparison group results
+- Counterfactual = comparison to what would have happened without the intervention
+- Every data point must include an inline citation: `[Source Name](URL)`
 
 #### SUMMARY REPORT
 
@@ -122,7 +114,7 @@ Keep the table with ALL previous columns intact. For each of the 20 negative con
 
 Write a recommendation paragraph (2-4 sentences), then include this EXACT scored checklist using [x] or [ ]. The score is out of 100 points.
 
-**IMPORTANT: Use EXACTLY these 6 criteria with EXACTLY these names and point values. Do NOT use the old 7-point checklist (a-g with "Understands the Social Issue" etc.) — that format is deprecated. There are exactly 6 items (a-f), not 7. Counterfactuals (e & f) are EXTRA CREDIT — base score is out of 100, max is 120.**
+Use exactly these 6 criteria (a-f) with these names and point values. Base score is out of 100, counterfactuals are extra credit (max 120).
 
 Base score (out of 100):
 - [x] or [ ] a. Has Ultimate Outcome Goals (50 pts)
@@ -149,7 +141,7 @@ Search the website for key outputs (scale, reach, cost data). Use specific numbe
 Summarize key intermediate outcomes. Focus on measurable short-to-medium term changes. Note whether data is self-reported or independently verified. Highlight any counterfactual information found.
 
 **Section 6 — Key Ultimate Outcomes**
-Summarize key ultimate outcomes. Long-term impact evidence only. This section may be thin for many organizations — that is fine. Do not pad it. If no ultimate outcome data exists, say so directly.
+Summarize key ultimate outcomes. Long-term impact evidence only. State directly if no data exists.
 
 **Section 7 — Continual Learning & Adaptation**
 Evidence that the organization learns from data and adapts its approach. Look for documented program changes based on evidence. "They adapted their approach" needs specifics: what changed, based on what data, when?
@@ -163,26 +155,18 @@ List all cited sources with full URLs:
 End with:
 *Report prepared using Todd Manwaring's Social Impact Evaluation Framework for Fierce Philanthropy.*
 
-### Citation Requirements
+### Citation Format
 
-Every factual claim, statistic, or data point MUST include an inline citation in markdown link format: `[Source Name](URL)`. Attribution matters:
-- Say "X reports that" when citing an org's own claims
-- Say "independent evaluation found" when citing third-party evidence
-- The distinction is load-bearing
+Inline citations as `[Source Name](URL)`. Distinguish attribution: "X reports that" for org claims, "independent evaluation found" for third-party evidence.
 
 ### 4. Submit the Report
 
-Do NOT write a local .md file. Submit the report directly using the `submit_report` tool with the full markdown as the `report_markdown` parameter.
+Submit using the `submit_report` tool with the full markdown as `report_markdown`.
 
 ## Quality Checks
-
-Before submitting:
-- [ ] All 5 prompt tables are present and complete (20 rows each)
-- [ ] Summary report has all 7 sections
-- [ ] Every factual claim has an inline citation `[Source Name](URL)`
+- [ ] All 5 prompt tables present and complete (20 rows each)
+- [ ] All 7 summary sections present
+- [ ] Every factual claim has an inline citation
 - [ ] SOURCES section lists all cited URLs
-- [ ] Scored checklist adds up correctly (total = sum of checked item point values)
-- [ ] Report follows the writing style guide (no em dashes, no filler adjectives, no AI tells)
-- [ ] Attribution is clear: "X reports that" for org claims vs "independent evaluation found" for third-party evidence
-- [ ] Paragraphs are under 4 sentences
-- [ ] No superlatives unless backed by comparative data
+- [ ] Score adds up correctly
+- [ ] Paragraphs under 4 sentences, no em dashes, no filler adjectives
