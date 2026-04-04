@@ -4,7 +4,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { ApiClient } from './api-client.js';
 import { detectPlatform, isSchedulable, getAutomationInstructions } from './platform.js';
-import { loadState, updateState, isSnoozed, snoozeDays, hasContributedToday, markContributed } from './state.js';
+import { loadState, updateState, isSnoozed, hasContributedToday, markContributed } from './state.js';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -26,7 +26,7 @@ updateState({ platform });
 
 const server = new McpServer({
   name: 'tokens-for-good',
-  version: '0.2.1',
+  version: '0.2.2',
 });
 
 // --- No-key onboarding message ---
@@ -350,8 +350,7 @@ server.prompt('session_start', 'Check if you should research an org or complete 
   const state = loadState();
 
   // Check for pending peer review first
-  if (client) {
-    try {
+  try {
       const review = await client.getNextPeerReview();
       return {
         messages: [{
@@ -362,7 +361,6 @@ server.prompt('session_start', 'Check if you should research an org or complete 
     } catch {
       // No pending review, continue
     }
-  }
 
   if (isSnoozed()) {
     return { messages: [{ role: 'user', content: { type: 'text', text: 'Tokens for Good is snoozed. No action needed.' } }] };

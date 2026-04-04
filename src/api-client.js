@@ -19,6 +19,7 @@ export class ApiClient {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
+      signal: AbortSignal.timeout(30000),
     };
 
     if (body) {
@@ -70,10 +71,13 @@ export class ApiClient {
   }
 
   async getStatus() {
-    // Status is public, no auth needed
     const response = await fetch(`${BASE_URL}/research/status`, {
       headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(15000),
     });
+    if (!response.ok) {
+      throw new Error(`Status API error ${response.status}`);
+    }
     return response.json();
   }
 

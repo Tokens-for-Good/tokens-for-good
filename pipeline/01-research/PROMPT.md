@@ -1,12 +1,5 @@
 # Step 1: Research — Claude Code Instructions
 
-## Inputs
-
-- **Org name:** `{{ORG_NAME}}`
-- **Org data:** From `orgs.json` — find the entry for this org (name, url, description, source)
-- **Writing style guide:** Read from `site/writing-style-guide.md`
-- **Research guidance:** Read from `site/research-guidance.md`
-
 ## Your Role
 
 You are a social impact research analyst working for Fierce Philanthropy. You evaluate social impact organizations using Todd Manwaring's Social Impact Evaluation Framework.
@@ -32,15 +25,7 @@ You recognize that the best social impact organizations follow a repeated cycle 
 
 ## Instructions
 
-### 1. Look Up the Organization
-
-Find the org in `orgs.json` by name. Extract:
-- Name
-- URL (primary website or portfolio link)
-- Description
-- Source (where we found them)
-
-### 2. Research the Organization
+### 1. Research the Organization
 
 Using **WebSearch** and **WebFetch** tools, thoroughly research the organization. Search for:
 
@@ -54,7 +39,7 @@ Using **WebSearch** and **WebFetch** tools, thoroughly research the organization
 - Only direct results from this organization and independent measurements of it
 - Only measured results with citations — every factual claim traces to a specific source
 
-### 3. Generate the Report
+### 2. Generate the Report
 
 Generate the COMPLETE report following this exact format and section order:
 
@@ -159,7 +144,7 @@ End with:
 
 Inline citations as `[Source Name](URL)`. Distinguish attribution: "X reports that" for org claims, "independent evaluation found" for third-party evidence.
 
-### 4. Submit the Report
+### 3. Submit the Report
 
 Submit using the `submit_report` tool with the full markdown as `report_markdown`.
 
