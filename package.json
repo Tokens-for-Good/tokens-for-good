@@ -1,6 +1,6 @@
 {
   "name": "tokens-for-good",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "type": "module",
   "description": "Donate your spare AI tokens to research nonprofits for Fierce Philanthropy",
   "bin": {

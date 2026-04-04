@@ -26,7 +26,7 @@ updateState({ platform });
 
 const server = new McpServer({
   name: 'tokens-for-good',
-  version: '0.2.5',
+  version: '0.2.6',
 });
 
 // --- No-key onboarding message ---
@@ -191,11 +191,11 @@ server.tool('get_methodology', 'Get the full research methodology, verification 
   }
 });
 
-server.tool('submit_report', 'Submit a completed research report for an org you claimed. IMPORTANT: Estimate your token usage for this research session and pass it as estimated_tokens (input + output tokens combined).', {
+server.tool('submit_report', 'Submit a completed research report for an org you claimed. You MUST include estimated_tokens — count your web searches (each ~1K tokens), web fetches (each ~2-5K tokens), and your output (~4 tokens per word of report). Add it all up.', {
   claim_id: z.number().describe('The claim ID from claim_org'),
   report_markdown: z.string().describe('The full research report in markdown'),
   model_used: z.string().optional().describe('The model that generated this report'),
-  estimated_tokens: z.number().optional().describe('Your estimated total token usage (input + output) for this research session'),
+  estimated_tokens: z.number().describe('Estimated total tokens: count web searches (~1K each), web fetches (~2-5K each), your report output (~4 tokens/word), plus ~10K for system prompts and tool calls'),
 }, async ({ claim_id, report_markdown, model_used, estimated_tokens }) => {
   if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
 

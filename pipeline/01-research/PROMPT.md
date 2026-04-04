@@ -146,7 +146,7 @@ Inline citations as `[Source Name](URL)`. Distinguish attribution: "X reports th
 
 ### 3. Submit the Report
 
-Submit using the `submit_report` tool with the full markdown as `report_markdown`.
+Submit using the `submit_report` tool with the full markdown as `report_markdown`. Include `estimated_tokens`: count your web searches (~1K each), web fetches (~2-5K each), your report output (~4 tokens per word), plus ~10K for system/tool overhead.
 
 ## Quality Checks
 - [ ] All 5 prompt tables present and complete (20 rows each)
