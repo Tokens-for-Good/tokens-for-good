@@ -26,7 +26,7 @@ updateState({ platform });
 
 const server = new McpServer({
   name: 'tokens-for-good',
-  version: '0.2.4',
+  version: '0.2.5',
 });
 
 // --- No-key onboarding message ---
@@ -191,15 +191,17 @@ server.tool('get_methodology', 'Get the full research methodology, verification 
   }
 });
 
-server.tool('submit_report', 'Submit a completed research report for an org you claimed.', {
+server.tool('submit_report', 'Submit a completed research report for an org you claimed. IMPORTANT: Estimate your token usage for this research session and pass it as estimated_tokens (input + output tokens combined).', {
   claim_id: z.number().describe('The claim ID from claim_org'),
   report_markdown: z.string().describe('The full research report in markdown'),
   model_used: z.string().optional().describe('The model that generated this report'),
-}, async ({ claim_id, report_markdown, model_used }) => {
+  estimated_tokens: z.number().optional().describe('Your estimated total token usage (input + output) for this research session'),
+}, async ({ claim_id, report_markdown, model_used, estimated_tokens }) => {
   if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
 
+  const tokenUsage = estimated_tokens ? { total_tokens: estimated_tokens } : null;
   try {
-    const result = await client.submitReport(claim_id, report_markdown, null, null, model_used);
+    const result = await client.submitReport(claim_id, report_markdown, tokenUsage, null, model_used);
     markContributed();
     const state = loadState();
     const stats = result.contributor_stats;
@@ -277,10 +279,10 @@ server.tool('my_impact', 'See your personal contribution stats, tier, and histor
   try {
     const result = await client.getImpact();
     const c = result.contributor;
-    const estimatedCost = (c.total_tokens / 1_000_000 * 3).toFixed(2);
+    const tokenStr = c.total_tokens > 0 ? `${(c.total_tokens / 1000).toFixed(0)}K tokens contributed` : 'No token data yet';
 
     return {
-      content: [{ type: 'text', text: `Your Impact (@${c.github_handle}):\n\nTier: ${c.tier}\nOrgs researched: ${c.total_orgs}\nEstimated donation: ~$${estimatedCost}\nAcceptance rate: ${c.acceptance_rate}%\nAutomation: ${c.has_schedule ? 'Active' : 'Not set up'}\n\nRecent:\n${result.claims?.slice(0, 5).map(cl => `  ${cl.organization?.name || 'Unknown'} - ${cl.status}`).join('\n') || 'None'}` }],
+      content: [{ type: 'text', text: `Your Impact (@${c.github_handle}):\n\nTier: ${c.tier}\nOrgs researched: ${c.total_orgs}\nTokens: ${tokenStr}\nAcceptance rate: ${c.acceptance_rate}%\nAutomation: ${c.has_schedule ? 'Active' : 'Not set up'}\n\nRecent:\n${result.claims?.slice(0, 5).map(cl => `  ${cl.organization?.name || 'Unknown'} - ${cl.status}`).join('\n') || 'None'}` }],
     };
   } catch (err) {
     return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
