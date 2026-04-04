@@ -44,12 +44,10 @@ This returns the org name, URL, description, and a claim_id. You have 30 minutes
 
 ### 2. Research the org
 Use WebSearch and WebFetch to thoroughly research the organization:
-- Search for the org's website, impact pages, annual reports
-- Search for independent evaluations (RCTs, J-PAL, 3ie)
-- Search for third-party reviews (GiveWell, Charity Navigator)
-- Search for financial data (ProPublica Nonprofit Explorer)
-
-Use ONLY WebSearch and WebFetch tools. Do NOT use curl or Bash for web requests.
+- The org's website, impact pages, annual reports
+- Independent evaluations (RCTs, J-PAL, 3ie)
+- Third-party reviews (GiveWell, Charity Navigator)
+- Financial data (ProPublica Nonprofit Explorer)
 
 ### 3. Write the report
 Follow the Fierce Philanthropy research methodology:

@@ -26,7 +26,7 @@ updateState({ platform });
 
 const server = new McpServer({
   name: 'tokens-for-good',
-  version: '0.2.0',
+  version: '0.2.1',
 });
 
 // --- No-key onboarding message ---
@@ -327,10 +327,10 @@ After adding, tell them: "Done! Research will now run hands-free. Try saying 'Re
   };
 });
 
-server.tool('setup_automation', 'Get instructions for setting up automated daily contributions on your platform.', {
+server.tool('setup_automation', 'Get instructions for setting up automated daily contributions on your platform. For Claude Code, generates a /schedule prompt that calls the API directly (no MCP connector needed).', {
   frequency: z.enum(['hourly', 'daily', 'weekly']).optional().describe('How often to contribute'),
 }, async ({ frequency }) => {
-  const instructions = getAutomationInstructions(platform, frequency || 'daily');
+  const instructions = getAutomationInstructions(platform, frequency || 'daily', apiKey);
   return { content: [{ type: 'text', text: instructions }] };
 });
 
