@@ -84,4 +84,8 @@ export class ApiClient {
   async checkSchedule() {
     return this.request('GET', '/research/schedule-check');
   }
+
+  async getNextAction() {
+    return this.request('GET', '/research/next-action');
+  }
 }

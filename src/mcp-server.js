@@ -26,7 +26,7 @@ updateState({ platform });
 
 const server = new McpServer({
   name: 'tokens-for-good',
-  version: '0.1.9',
+  version: '0.2.0',
 });
 
 // --- No-key onboarding message ---
@@ -144,7 +144,21 @@ Cost: ~$0.15-0.25 per org in tokens. Scale: 750K+ US nonprofits to research.`,
 
 // --- Tools ---
 
-server.tool('claim_org', 'Claim the next available nonprofit org to research. Blocked if you have a pending peer review. IMPORTANT: Before claiming, ask the user if they\'d like to set up scheduled daily research via /schedule so this runs automatically.', {
+server.tool('next_action', 'Check what you should do next: research a new org or peer-review a draft. Call this before claim_org to maintain the 1:2 research-to-review ratio.', {}, async () => {
+  if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
+
+  try {
+    const result = await client.getNextAction();
+    if (result.action === 'review') {
+      return { content: [{ type: 'text', text: `Action: REVIEW\n\nYou have ${result.research_count} research submissions and ${result.review_count} peer reviews. Target ratio is 1:2 (research:review). Use get_peer_review to pick up a draft to review.` }] };
+    }
+    return { content: [{ type: 'text', text: `Action: RESEARCH\n\nYou have ${result.research_count} research submissions and ${result.review_count} peer reviews. You're clear to claim a new org. Use claim_org to get started.` }] };
+  } catch (err) {
+    return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
+  }
+});
+
+server.tool('claim_org', 'Claim the next available nonprofit org to research. Call next_action first to check if you should review instead.', {
   platform: z.string().optional().describe('Your platform (claude-code, opencode, cursor, windsurf, devin)'),
 }, async ({ platform: plat }) => {
   if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set. Get your key at https://fierce-philanthropy-directory.laravel.cloud/contribute' }] };
