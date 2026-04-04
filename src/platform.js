@@ -1,21 +1,20 @@
 // Platform detection and automation guidance
 
 export function detectPlatform() {
-  // Check environment hints
   if (process.env.CLAUDE_CODE) return 'claude-code';
   if (process.env.OPENCODE) return 'opencode';
   if (process.env.DEVIN) return 'devin';
   if (process.env.CURSOR_SESSION) return 'cursor';
   if (process.env.WINDSURF_SESSION) return 'windsurf';
 
-  // Check parent process name
   const parentName = process.env._ || process.env.PARENT_PROCESS || '';
   if (parentName.includes('claude')) return 'claude-code';
   if (parentName.includes('opencode')) return 'opencode';
   if (parentName.includes('cursor')) return 'cursor';
   if (parentName.includes('windsurf')) return 'windsurf';
 
-  return 'unknown';
+  // Default to claude-code since it's the primary MCP host
+  return 'claude-code';
 }
 
 export function isSchedulable(platform) {
@@ -137,7 +136,7 @@ Configure a ${frequency} recurring session with the prompt:
 Devin runs in the cloud, fully autonomous.`;
 
     default:
-      return `Automated contributions are not available on this platform. You can contribute manually by saying "Research an org for Fierce Philanthropy" in any session.`;
+      return getAutomationInstructions('claude-code', frequency, apiKey);
   }
 }
 
