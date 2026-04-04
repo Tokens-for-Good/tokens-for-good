@@ -3,8 +3,8 @@
 ## Inputs
 
 - **Org name:** `{{ORG_NAME}}`
-- **Research report:** Read from `{{ORG_SLUG}}_Research_Report.md`
-- **Research guidance:** Read from `site/research-guidance.md`
+- **Research report:** The report from Step 1 (kept in memory from the previous step)
+- **Research guidance:** The same methodology from Step 1
 
 ## Purpose
 
@@ -65,12 +65,11 @@ For each HIGH or MEDIUM issue, write the exact correction:
 **Corrected:** [Fixed text]
 ```
 
-### 6. Apply Corrections and Write Output
+### 6. Apply Corrections and Produce Output
 
-Apply all corrections to produce a verified version of the report. Write to:
-`{{ORG_SLUG}}_02_Verified.md`
+Apply all corrections to produce a verified version of the report. Keep the result in memory for the next pipeline step (Humanize).
 
-Start the file with a verification log:
+Start the output with a verification log:
 
 ```markdown
 <!-- Verified: {{ORG_NAME}} | Date: [date] -->

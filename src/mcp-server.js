@@ -4,7 +4,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { ApiClient } from './api-client.js';
 import { detectPlatform, isSchedulable, getAutomationInstructions } from './platform.js';
-import { loadState, updateState, isSnoozed, hasContributedToday, markContributed } from './state.js';
+import { loadState, updateState, isSnoozed, hasContributedToday, markContributed, snoozeDays } from './state.js';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -26,7 +26,7 @@ updateState({ platform });
 
 const server = new McpServer({
   name: 'tokens-for-good',
-  version: '0.2.6',
+  version: '0.2.7',
 });
 
 // --- No-key onboarding message ---
@@ -359,6 +359,13 @@ server.tool('setup_automation', 'Get instructions for setting up automated daily
   return { content: [{ type: 'text', text: instructions }] };
 });
 
+server.tool('snooze', 'Snooze the Tokens for Good session start prompt for a number of days.', {
+  days: z.number().min(1).max(30).describe('Number of days to snooze (1 = ask tomorrow, 7 = ask in a week)'),
+}, async ({ days }) => {
+  snoozeDays(days);
+  return { content: [{ type: 'text', text: `Got it! Tokens for Good will stay quiet for ${days} day${days !== 1 ? 's' : ''}.` }] };
+});
+
 // --- Prompts (session start) ---
 
 server.prompt('session_start', 'Check if you should research an org or complete a peer review', {}, async () => {
@@ -393,7 +400,7 @@ server.prompt('session_start', 'Check if you should research an org or complete 
 
   if (state.auto_schedule) {
     try {
-      const impact = await client?.getImpact();
+      const impact = await client.getImpact();
       const c = impact?.contributor;
       return {
         messages: [{
@@ -420,14 +427,14 @@ server.prompt('session_start', 'Check if you should research an org or complete 
     return {
       messages: [{
         role: 'user',
-        content: { type: 'text', text: `Tokens for Good: Would you like to donate your spare tokens to research a nonprofit today?\n\n1. Set up automatic daily contributions (recommended)\n2. Just run one now\n3. Ask me tomorrow\n4. Ask me in a week\n\nUse setup_automation for option 1, claim_org for option 2.${permNote}` },
+        content: { type: 'text', text: `Tokens for Good: Would you like to donate your spare tokens to research a nonprofit today?\n\n1. Set up automatic daily contributions (recommended)\n2. Just run one now\n3. Ask me tomorrow\n4. Ask me in a week\n\nUse setup_automation for option 1, claim_org for option 2, snooze with days=1 for option 3, snooze with days=7 for option 4.${permNote}` },
       }],
     };
   } else {
     return {
       messages: [{
         role: 'user',
-        content: { type: 'text', text: `Tokens for Good: Would you like to research a nonprofit org today? It takes about 5 minutes and costs ~$0.20 in tokens.\n\n1. Research an org now\n2. Ask me tomorrow\n3. Ask me in a week\n\nUse claim_org for option 1.${permNote}` },
+        content: { type: 'text', text: `Tokens for Good: Would you like to research a nonprofit org today? It takes about 5 minutes.\n\n1. Research an org now\n2. Ask me tomorrow\n3. Ask me in a week\n\nUse claim_org for option 1, snooze with days=1 for option 2, snooze with days=7 for option 3.${permNote}` },
       }],
     };
   }

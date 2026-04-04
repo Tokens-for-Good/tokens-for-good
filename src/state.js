@@ -64,8 +64,8 @@ export function hasContributedToday() {
 }
 
 export function markContributed() {
-  updateState({
-    last_contributed: new Date().toISOString(),
-    total_session_contributions: loadState().total_session_contributions + 1,
-  });
+  const state = loadState();
+  state.last_contributed = new Date().toISOString();
+  state.total_session_contributions = (state.total_session_contributions || 0) + 1;
+  saveState(state);
 }

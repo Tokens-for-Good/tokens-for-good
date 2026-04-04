@@ -3,8 +3,8 @@
 ## Inputs
 
 - **Org name:** `{{ORG_NAME}}`
-- **Verified report:** Read from `{{ORG_SLUG}}_02_Verified.md`
-- **Writing style guide:** Read from `site/writing-style-guide.md`
+- **Verified report:** The verified report from Step 2 (kept in memory from the previous step)
+- **Writing style guide:** The AI decontamination rules below
 
 ## Purpose
 
@@ -16,7 +16,7 @@ Step 2 verified the facts. This step makes the report sound human. You are an ed
 
 Read the verified report (skip the verification log header, work on the content below the `---`).
 
-Read the writing style guide. The "AI Decontamination Rules" section is your checklist.
+The AI decontamination passes below are your checklist.
 
 ### 2. Run Each Pass
 
@@ -97,11 +97,11 @@ After all passes, verify you did NOT change:
 - [ ] The SOURCES section
 - [ ] Section separators (`---`)
 
-### 4. Write Output
+### 4. Produce Output
 
-Write to: `{{ORG_SLUG}}_03_Humanized.md`
+Keep the humanized report in memory. This is the final version that will be submitted via the `submit_report` tool.
 
-Start with a change log:
+Start the output with a change log:
 
 ```markdown
 <!-- Humanized: {{ORG_NAME}} | Date: [date] -->

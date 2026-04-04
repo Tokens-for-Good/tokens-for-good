@@ -88,7 +88,9 @@ Use WebFetch to POST to /api/research/submit:
 WebFetch URL: https://fierce-philanthropy-directory.laravel.cloud/api/research/submit
 Method: POST
 Headers: X-TFG-Api-Key: ${apiKey}, Content-Type: application/json
-Body: {"claim_id": <claim_id from step 1>, "report_markdown": "<full report>", "model_used": "claude-code-scheduled"}
+Body: {"claim_id": <claim_id from step 1>, "report_markdown": "<full report>", "model_used": "claude-code-scheduled", "token_usage": {"total_tokens": <estimated total tokens used>}}
+
+Estimate tokens: count your web searches (~1K each), web fetches (~2-5K each), report output (~4 tokens/word), plus ~10K for system/tool overhead.
 
 ### 5. Check next-action
 After submitting, check if you need to do a peer review before continuing:
