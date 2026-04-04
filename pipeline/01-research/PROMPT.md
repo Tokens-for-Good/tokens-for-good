@@ -122,16 +122,19 @@ Keep the table with ALL previous columns intact. For each of the 20 negative con
 
 Write a recommendation paragraph (2-4 sentences), then include this EXACT scored checklist using [x] or [ ]. The score is out of 100 points.
 
-**IMPORTANT: Use EXACTLY these 6 criteria with EXACTLY these names and point values. Do NOT use the old 7-point checklist (a-g with "Understands the Social Issue" etc.) — that format is deprecated. There are exactly 6 items (a-f), not 7.**
+**IMPORTANT: Use EXACTLY these 6 criteria with EXACTLY these names and point values. Do NOT use the old 7-point checklist (a-g with "Understands the Social Issue" etc.) — that format is deprecated. There are exactly 6 items (a-f), not 7. Counterfactuals (e & f) are EXTRA CREDIT — base score is out of 100, max is 120.**
 
+Base score (out of 100):
 - [x] or [ ] a. Has Ultimate Outcome Goals (50 pts)
-- [x] or [ ] b. Measures Intermediate Outcomes (5 pts)
-- [x] or [ ] c. Measures Ultimate Outcomes (10 pts)
-- [x] or [ ] d. Measures Intermediate Counterfactuals (10 pts)
-- [x] or [ ] e. Measures Ultimate Counterfactuals (20 pts)
-- [x] or [ ] f. Shows Continual Learning & Adaptation (5 pts)
+- [x] or [ ] b. Measures Intermediate Outcomes (10 pts)
+- [x] or [ ] c. Measures Ultimate Outcomes (15 pts)
+- [x] or [ ] d. Shows Continual Learning & Adaptation (25 pts)
 
-**Score: [X]/100** (sum of checked items' point values only — do NOT count unchecked items)
+Extra credit:
+- [x] or [ ] e. Measures Intermediate Counterfactual (10 pts)
+- [x] or [ ] f. Measures Ultimate Counterfactual (10 pts)
+
+**Score: [X]/100** (sum of checked items' point values — can exceed 100 with extra credit, max 120)
 
 **Section 2 — The Social Problem**
 Describe the social problem the organization is trying to solve. Include scale (how many affected, what geographies). Cite sources for prevalence data.
