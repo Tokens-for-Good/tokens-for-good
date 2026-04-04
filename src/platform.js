@@ -90,6 +90,40 @@ Method: POST
 Headers: X-TFG-Api-Key: ${apiKey}, Content-Type: application/json
 Body: {"claim_id": <claim_id from step 1>, "report_markdown": "<full report>", "model_used": "claude-code-scheduled"}
 
+### 5. Check next-action
+After submitting, check if you need to do a peer review before continuing:
+
+WebFetch URL: https://fierce-philanthropy-directory.laravel.cloud/api/research/next-action
+Method: GET
+Headers: X-TFG-Api-Key: ${apiKey}, Accept: application/json
+
+If the response says action is "review", do the review:
+
+**5a. Get the review:**
+WebFetch URL: https://fierce-philanthropy-directory.laravel.cloud/api/research/review/next
+Method: GET
+Headers: X-TFG-Api-Key: ${apiKey}, Accept: application/json
+
+**5b. Review the report** — score it 1-4 (4=great, 3=good with minor fixes, 2=needs redo, 1=bad actor)
+
+**5c. Submit the review:**
+WebFetch URL: https://fierce-philanthropy-directory.laravel.cloud/api/research/review/submit
+Method: POST
+Headers: X-TFG-Api-Key: ${apiKey}, Content-Type: application/json
+Body: {"claim_id": <claim_id>, "score": <1-4>, "notes": "<review notes>", "updated_report": "<fixed report if score is 3>"}
+
+### 6. Repeat (up to 3 orgs per session)
+After completing each org (and any peer review), loop back to Step 1 and claim the next org.
+Research up to 3 orgs total per session. After 3 orgs (or if no more are available), stop.
+
+## Batch Flow Summary
+\`\`\`
+for i in 1..3:
+  claim org → research → submit report
+  check next-action → if review needed, do review
+  repeat
+\`\`\`
+
 ### Rules
 - Every factual claim needs an inline citation [Source Name](URL)
 - Only use direct results from the org, not from similar orgs

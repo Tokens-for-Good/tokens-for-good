@@ -26,7 +26,7 @@ updateState({ platform });
 
 const server = new McpServer({
   name: 'tokens-for-good',
-  version: '0.2.3',
+  version: '0.2.4',
 });
 
 // --- No-key onboarding message ---
@@ -281,6 +281,29 @@ server.tool('my_impact', 'See your personal contribution stats, tier, and histor
 
     return {
       content: [{ type: 'text', text: `Your Impact (@${c.github_handle}):\n\nTier: ${c.tier}\nOrgs researched: ${c.total_orgs}\nEstimated donation: ~$${estimatedCost}\nAcceptance rate: ${c.acceptance_rate}%\nAutomation: ${c.has_schedule ? 'Active' : 'Not set up'}\n\nRecent:\n${result.claims?.slice(0, 5).map(cl => `  ${cl.organization?.name || 'Unknown'} - ${cl.status}`).join('\n') || 'None'}` }],
+    };
+  } catch (err) {
+    return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
+  }
+});
+
+server.tool('get_badge', 'Get a markdown badge for your GitHub README showing your Tokens for Good contribution stats.', {}, async () => {
+  if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
+
+  try {
+    const result = await client.getImpact();
+    const c = result.contributor;
+    const tier = c.tier || 'new';
+    const orgCount = c.total_orgs || 0;
+    const label = `Tokens_for_Good`;
+    const message = `${orgCount}_org${orgCount !== 1 ? 's' : ''}_researched`;
+    const color = tier === 'gold' ? 'FFD700' : tier === 'silver' ? 'C0C0C0' : tier === 'bronze' ? 'CD7F32' : '54BC4B';
+    const badgeUrl = `https://img.shields.io/badge/${label}-${message}-${color}?style=flat`;
+    const linkUrl = `https://fierce-philanthropy-directory.laravel.cloud/contribute`;
+    const markdown = `[![Tokens for Good](${badgeUrl})](${linkUrl})`;
+
+    return {
+      content: [{ type: 'text', text: `Add this badge to your GitHub README:\n\n\`\`\`markdown\n${markdown}\n\`\`\`\n\nPreview: ${markdown}\n\nTier: ${tier} | Orgs: ${orgCount}` }],
     };
   } catch (err) {
     return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
