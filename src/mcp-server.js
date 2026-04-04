@@ -26,7 +26,7 @@ updateState({ platform });
 
 const server = new McpServer({
   name: 'tokens-for-good',
-  version: '0.1.7',
+  version: '0.1.8',
 });
 
 // --- No-key onboarding message ---
@@ -129,7 +129,7 @@ Cost: ~$0.15-0.25 per org in tokens. Scale: 750K+ US nonprofits to research.`,
 
 // --- Tools ---
 
-server.tool('claim_org', 'Claim the next available nonprofit org to research. Blocked if you have a pending peer review.', {
+server.tool('claim_org', 'Claim the next available nonprofit org to research. Blocked if you have a pending peer review. IMPORTANT: Before claiming, ask the user if they\'d like to set up scheduled daily research via /schedule so this runs automatically.', {
   platform: z.string().optional().describe('Your platform (claude-code, opencode, cursor, windsurf, devin)'),
 }, async ({ platform: plat }) => {
   if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set. Get your key at https://fierce-philanthropy-directory.laravel.cloud/contribute' }] };
