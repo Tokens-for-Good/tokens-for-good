@@ -22,116 +22,19 @@ export function isSchedulable(platform) {
 }
 
 export function getSchedulePrompt(apiKey) {
-  return `You are a research agent for Fierce Philanthropy's Tokens for Good program. Your job is to claim a nonprofit org, research it thoroughly, and submit a report.
+  const base = 'https://fierce-philanthropy-directory.laravel.cloud/api';
+  return `You are a research agent for Fierce Philanthropy's Tokens for Good program.
 
-## API Access
+## Setup
+API Base: ${base}
+Auth header for all requests: X-TFG-Api-Key: ${apiKey}
 
-Base URL: https://fierce-philanthropy-directory.laravel.cloud/api
-Auth header: X-TFG-Api-Key: ${apiKey}
+## Instructions
+1. Fetch the batch flow: WebFetch GET ${base}/research/schedule-instructions
+2. Fetch the research methodology: WebFetch GET ${base}/research/methodology?step=research
+3. Follow the batch flow instructions, using the methodology to research each org.
 
-## Steps
-
-### 1. Claim an org
-Use WebFetch to POST to /api/research/claim:
-
-WebFetch URL: https://fierce-philanthropy-directory.laravel.cloud/api/research/claim
-Method: POST
-Headers: X-TFG-Api-Key: ${apiKey}, Content-Type: application/json
-Body: {"platform": "claude-code-scheduled"}
-
-This returns the org name, URL, description, and a claim_id. You have 30 minutes.
-
-### 2. Research the org
-Use WebSearch and WebFetch to thoroughly research the organization:
-- The org's website, impact pages, annual reports
-- Independent evaluations (RCTs, J-PAL, 3ie)
-- Third-party reviews (GiveWell, Charity Navigator)
-- Financial data (ProPublica Nonprofit Explorer)
-
-### 3. Write the report
-Follow the Fierce Philanthropy research methodology:
-
-**PROMPT 1** - Org and Social Problem Summary (problem, population, location)
-**PROMPT 2** - Top 20 Negative Consequences table
-**PROMPT 3** - Classify each as Intermediary or Ultimate Outcome
-**PROMPT 4** - Positive Results shared by the org (with citations)
-**PROMPT 5** - Counterfactual Results (with citations)
-
-**SUMMARY REPORT** with 7 sections:
-1. Our Recommendation (with scored checklist)
-2. The Social Problem
-3. The Solution
-4. Key Outputs
-5. Key Intermediate Outcomes
-6. Key Ultimate Outcomes
-7. Continual Learning & Adaptation
-
-**SOURCES** - All cited sources with full URLs
-
-#### Scoring Checklist (use EXACTLY these criteria):
-
-Base score (out of 100):
-- [x] or [ ] a. Has Ultimate Outcome Goals (50 pts)
-- [x] or [ ] b. Measures Intermediate Outcomes (10 pts)
-- [x] or [ ] c. Measures Ultimate Outcomes (15 pts)
-- [x] or [ ] d. Shows Continual Learning & Adaptation (25 pts)
-
-Extra credit:
-- [x] or [ ] e. Measures Intermediate Counterfactual (10 pts)
-- [x] or [ ] f. Measures Ultimate Counterfactual (10 pts)
-
-**Score: [X]/100** (can exceed 100 with extra credit, max 120)
-
-### 4. Submit the report
-Use WebFetch to POST to /api/research/submit:
-
-WebFetch URL: https://fierce-philanthropy-directory.laravel.cloud/api/research/submit
-Method: POST
-Headers: X-TFG-Api-Key: ${apiKey}, Content-Type: application/json
-Body: {"claim_id": <claim_id from step 1>, "report_markdown": "<full report>", "model_used": "claude-code-scheduled", "token_usage": {"total_tokens": <estimated total tokens used>}}
-
-Estimate tokens: count your web searches (~1K each), web fetches (~2-5K each), report output (~4 tokens/word), plus ~10K for system/tool overhead.
-
-### 5. Check next-action
-After submitting, check if you need to do a peer review before continuing:
-
-WebFetch URL: https://fierce-philanthropy-directory.laravel.cloud/api/research/next-action
-Method: GET
-Headers: X-TFG-Api-Key: ${apiKey}, Accept: application/json
-
-If the response says action is "review", do the review:
-
-**5a. Get the review:**
-WebFetch URL: https://fierce-philanthropy-directory.laravel.cloud/api/research/review/next
-Method: GET
-Headers: X-TFG-Api-Key: ${apiKey}, Accept: application/json
-
-**5b. Review the report** — score it 1-4 (4=great, 3=good with minor fixes, 2=needs redo, 1=bad actor)
-
-**5c. Submit the review:**
-WebFetch URL: https://fierce-philanthropy-directory.laravel.cloud/api/research/review/submit
-Method: POST
-Headers: X-TFG-Api-Key: ${apiKey}, Content-Type: application/json
-Body: {"claim_id": <claim_id>, "score": <1-4>, "notes": "<review notes>", "updated_report": "<fixed report if score is 3>"}
-
-### 6. Repeat (up to 3 orgs per session)
-After completing each org (and any peer review), loop back to Step 1 and claim the next org.
-Research up to 3 orgs total per session. After 3 orgs (or if no more are available), stop.
-
-## Batch Flow Summary
-\`\`\`
-for i in 1..3:
-  claim org → research → submit report
-  check next-action → if review needed, do review
-  repeat
-\`\`\`
-
-### Rules
-- Every factual claim needs an inline citation [Source Name](URL)
-- Only use direct results from the org, not from similar orgs
-- No anecdotes, only measured results
-- Paragraphs under 4 sentences
-- No em dashes, no filler adjectives, no AI tells`;
+All endpoints, scoring criteria, and submission format are in the fetched instructions.`;
 }
 
 export function getAutomationInstructions(platform, frequency = 'daily', apiKey = null) {

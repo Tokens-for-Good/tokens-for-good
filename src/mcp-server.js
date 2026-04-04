@@ -26,7 +26,7 @@ updateState({ platform });
 
 const server = new McpServer({
   name: 'tokens-for-good',
-  version: '0.2.7',
+  version: '0.3.0',
 });
 
 // --- No-key onboarding message ---
