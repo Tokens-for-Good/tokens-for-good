@@ -42,7 +42,7 @@ Find the org in `orgs.json` by name. Extract:
 
 ### 2. Research the Organization
 
-Using web search and web fetch, thoroughly research the organization. Search for:
+Using the **WebSearch** and **WebFetch** tools, thoroughly research the organization. Do NOT use curl, wget, or Bash commands for web requests — always use the built-in WebSearch and WebFetch tools so the research runs without permission prompts. Search for:
 
 1. The organization's main website — read the homepage, about page, and impact/results pages
 2. Their impact/results/evidence pages — look for published data, annual reports, metrics

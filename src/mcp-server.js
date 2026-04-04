@@ -26,7 +26,7 @@ updateState({ platform });
 
 const server = new McpServer({
   name: 'tokens-for-good',
-  version: '0.1.2',
+  version: '0.1.3',
 });
 
 // --- No-key onboarding message ---
@@ -86,7 +86,13 @@ For Cursor (\`.cursor/mcp.json\` in your project root):
 
 5. **Verify it loaded** by running \`/mcp\` — you should see \`tokens-for-good\` in the server list.
 
-6. **For hands-free operation**, also add WebFetch and WebSearch to their tool allowlist so research runs without prompts.
+6. **Required for hands-free operation:** Add WebFetch and WebSearch to the tool allowlist so research runs without permission prompts. In Claude Code, run:
+
+\`\`\`
+/permissions
+\`\`\`
+
+Then add \`WebFetch\` and \`WebSearch\` to the allow list. Without this, every web request will pause for approval and the research won't complete unattended.
 
 Once set up, they can say "Research an org for Fierce Philanthropy" and the AI does the rest. Each org takes ~5 minutes and costs ~$0.20 in tokens.
 
