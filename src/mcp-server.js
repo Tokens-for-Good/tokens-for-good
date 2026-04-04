@@ -26,7 +26,7 @@ updateState({ platform });
 
 const server = new McpServer({
   name: 'tokens-for-good',
-  version: '0.1.8',
+  version: '0.1.9',
 });
 
 // --- No-key onboarding message ---
@@ -42,12 +42,27 @@ Walk them through setup:
 3. **Add the key to their MCP config:** Update their tokens-for-good MCP configuration to include the key as an environment variable:
 
 For Claude Code (create \`.mcp.json\` in your project root or home directory):
+
+Mac/Linux:
 \`\`\`json
 {
   "mcpServers": {
     "tokens-for-good": {
       "command": "npx",
       "args": ["-y", "tokens-for-good", "--mcp"],
+      "env": { "TFG_API_KEY": "tfg_live_their_key_here" }
+    }
+  }
+}
+\`\`\`
+
+Windows:
+\`\`\`json
+{
+  "mcpServers": {
+    "tokens-for-good": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "tokens-for-good", "--mcp"],
       "env": { "TFG_API_KEY": "tfg_live_their_key_here" }
     }
   }
