@@ -170,15 +170,13 @@ Every factual claim, statistic, or data point MUST include an inline citation in
 - Say "independent evaluation found" when citing third-party evidence
 - The distinction is load-bearing
 
-### 4. Write Output
+### 4. Submit the Report
 
-Write the report to: `{{ORG_SLUG}}_Research_Report.md` in the project root.
-
-The slug is the org name with spaces replaced by underscores and special characters removed.
+Do NOT write a local .md file. Submit the report directly using the `submit_report` tool with the full markdown as the `report_markdown` parameter.
 
 ## Quality Checks
 
-Before writing the output:
+Before submitting:
 - [ ] All 5 prompt tables are present and complete (20 rows each)
 - [ ] Summary report has all 7 sections
 - [ ] Every factual claim has an inline citation `[Source Name](URL)`
