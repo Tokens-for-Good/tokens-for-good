@@ -26,7 +26,7 @@ updateState({ platform });
 
 const server = new McpServer({
   name: 'tokens-for-good',
-  version: '0.3.3',
+  version: '0.3.4',
 });
 
 // --- No-key onboarding message ---
@@ -345,7 +345,20 @@ server.tool('check_permissions', 'Check if permissions and hooks are set up for 
 
 The hook reads TFG_API_KEY from the environment (set in .mcp.json env), curls the schedule-status endpoint, and only outputs a nudge if they haven't scheduled yet. Once they schedule, the hook goes silent.
 
-After setting up both, tell the user: "Done! Permissions and schedule reminder are configured."` }],
+3. **Skill** — create the file ~/.claude/skills/tfg/SKILL.md with this content:
+
+---
+name: tfg
+description: Do charitable research for Fierce Philanthropy via Tokens for Good
+---
+
+Do charitable research for Fierce Philanthropy via Tokens for Good. Call next_action to check whether to research or review. Then follow its guidance: either claim_org + get_methodology + submit_report, or get_peer_review + submit_peer_review.
+
+---
+
+This lets the user type /tfg to start a research session.
+
+After setting up everything, tell the user: "Done! Permissions, schedule reminder, and /tfg command are configured."` }],
   };
 });
 
