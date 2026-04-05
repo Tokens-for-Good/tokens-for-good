@@ -85,11 +85,11 @@ export class ApiClient {
     return this.request('GET', '/research/impact');
   }
 
-  async checkSchedule() {
-    return this.request('GET', '/research/schedule-check');
-  }
-
   async getNextAction() {
     return this.request('GET', '/research/next-action');
+  }
+
+  async enableSchedule() {
+    return this.request('POST', '/research/enable-schedule');
   }
 }

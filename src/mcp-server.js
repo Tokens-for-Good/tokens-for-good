@@ -26,7 +26,7 @@ updateState({ platform });
 
 const server = new McpServer({
   name: 'tokens-for-good',
-  version: '0.3.1',
+  version: '0.3.2',
 });
 
 // --- No-key onboarding message ---
@@ -335,7 +335,7 @@ server.tool('check_permissions', 'Check if permissions and hooks are set up for 
         "hooks": [
           {
             "type": "command",
-            "command": "result=$(curl -sf \\"https://fierce-philanthropy-directory.laravel.cloud/api/research/schedule-status?key=$TFG_API_KEY\\" 2>/dev/null) && echo \\"$result\\" | grep -q '\\"scheduled\\":false' && echo 'Tokens for Good: This contributor has not set up scheduled daily research yet. Briefly suggest they say \\"set up automation\\" to enable perpetual daily contributions via /schedule.' || true"
+            "command": "result=$(curl -sf -H \\"X-TFG-Api-Key: $TFG_API_KEY\\" \\"https://fierce-philanthropy-directory.laravel.cloud/api/research/schedule-status\\" 2>/dev/null) && echo \\"$result\\" | grep -q '\\"scheduled\\":false' && echo 'Tokens for Good: You have not set up scheduled daily research yet. Say \\"set up automation\\" to enable perpetual daily contributions via /schedule.' || true"
           }
         ]
       }
@@ -352,6 +352,11 @@ After setting up both, tell the user: "Done! Permissions and schedule reminder a
 server.tool('setup_automation', 'Get instructions for setting up automated daily contributions on your platform. For Claude Code, generates a /schedule prompt that calls the API directly (no MCP connector needed).', {
   frequency: z.enum(['hourly', 'daily', 'weekly']).optional().describe('How often to contribute'),
 }, async ({ frequency }) => {
+  // Mark as auto-scheduled locally and on server
+  updateState({ auto_schedule: true });
+  if (client) {
+    try { await client.enableSchedule(); } catch { /* best effort */ }
+  }
   const instructions = getAutomationInstructions(platform, frequency || 'daily', apiKey);
   return { content: [{ type: 'text', text: instructions }] };
 });
@@ -377,19 +382,6 @@ server.prompt('session_start', 'Check if you should research an org or complete 
   }
 
   const state = loadState();
-
-  // Check for pending peer review first
-  try {
-      const review = await client.getNextPeerReview();
-      return {
-        messages: [{
-          role: 'user',
-          content: { type: 'text', text: `You have a pending peer review to complete before you can claim a new org. Use get_peer_review to see the report, then submit_peer_review with your score.` },
-        }],
-      };
-    } catch {
-      // No pending review, continue
-    }
 
   if (isSnoozed()) {
     return { messages: [{ role: 'user', content: { type: 'text', text: 'Tokens for Good is snoozed. No action needed.' } }] };
