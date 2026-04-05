@@ -1,12 +1,17 @@
 {
   "name": "tokens-for-good",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "type": "module",
   "description": "Donate your spare AI tokens to research nonprofits for Fierce Philanthropy",
   "bin": {
     "tokens-for-good": "src/cli.js"
   },
   "main": "./src/mcp-server.js",
+  "files": [
+    "src/",
+    "pipeline/",
+    "LICENSE"
+  ],
   "scripts": {
     "start": "node src/mcp-server.js",
     "test": "node --test src/**/*.test.js"
