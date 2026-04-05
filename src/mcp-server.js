@@ -26,7 +26,7 @@ updateState({ platform });
 
 const server = new McpServer({
   name: 'tokens-for-good',
-  version: '0.3.2',
+  version: '0.3.3',
 });
 
 // --- No-key onboarding message ---
@@ -192,7 +192,7 @@ server.tool('get_methodology', 'Get the full research methodology, verification 
 });
 
 server.tool('submit_report', 'Submit a completed research report for an org you claimed. You MUST include estimated_tokens — count your web searches (each ~1K tokens), web fetches (each ~2-5K tokens), and your output (~4 tokens per word of report). Add it all up.', {
-  claim_id: z.number().describe('The claim ID from claim_org'),
+  claim_id: z.string().describe('The claim ID from claim_org'),
   report_markdown: z.string().describe('The full research report in markdown'),
   model_used: z.string().optional().describe('The model that generated this report'),
   estimated_tokens: z.number().describe('Estimated total tokens: count web searches (~1K each), web fetches (~2-5K each), your report output (~4 tokens/word), plus ~10K for system prompts and tool calls'),
@@ -240,7 +240,7 @@ server.tool('get_peer_review', 'Get a draft report assigned to you for peer revi
 });
 
 server.tool('submit_peer_review', 'Submit your peer review score for a report.', {
-  claim_id: z.number().describe('The claim ID of the report being reviewed'),
+  claim_id: z.string().describe('The claim ID of the report being reviewed'),
   score: z.number().min(1).max(4).describe('Score: 4=great, 3=good with fixes, 2=needs redo, 1=bad actor'),
   notes: z.string().optional().describe('Review notes explaining the score'),
   updated_report: z.string().optional().describe('If score is 3, the fixed version of the report'),
