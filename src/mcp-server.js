@@ -4,7 +4,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { ApiClient } from './api-client.js';
 import { detectPlatform, isSchedulable, getAutomationInstructions } from './platform.js';
-import { loadState, updateState, isSnoozed, hasContributedToday, markContributed, snoozeDays } from './state.js';
+import { loadState, updateState, isSnoozed, snoozeDays, hasContributedToday, markContributed } from './state.js';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -26,7 +26,7 @@ updateState({ platform });
 
 const server = new McpServer({
   name: 'tokens-for-good',
-  version: '0.3.5',
+  version: '0.1.0',
 });
 
 // --- No-key onboarding message ---
@@ -41,28 +41,13 @@ Walk them through setup:
 
 3. **Add the key to their MCP config:** Update their tokens-for-good MCP configuration to include the key as an environment variable:
 
-For Claude Code (create \`.mcp.json\` in your project root or home directory):
-
-Mac/Linux:
+For Claude Code (.mcp.json or settings.json):
 \`\`\`json
 {
   "mcpServers": {
     "tokens-for-good": {
       "command": "npx",
       "args": ["-y", "tokens-for-good", "--mcp"],
-      "env": { "TFG_API_KEY": "tfg_live_their_key_here" }
-    }
-  }
-}
-\`\`\`
-
-Windows:
-\`\`\`json
-{
-  "mcpServers": {
-    "tokens-for-good": {
-      "command": "cmd",
-      "args": ["/c", "npx", "-y", "tokens-for-good", "--mcp"],
       "env": { "TFG_API_KEY": "tfg_live_their_key_here" }
     }
   }
@@ -82,7 +67,7 @@ For Opencode (opencode.json):
 }
 \`\`\`
 
-For Cursor (\`.cursor/mcp.json\` in your project root):
+For Cursor (.cursor/mcp.json):
 \`\`\`json
 {
   "mcpServers": {
@@ -95,13 +80,9 @@ For Cursor (\`.cursor/mcp.json\` in your project root):
 }
 \`\`\`
 
-**Important:** Do NOT put MCP config in \`~/.claude/settings.json\` — Claude Code ignores MCP servers there. The \`.mcp.json\` file must be in your project root or home directory.
+4. **Restart the session** after updating the config so the MCP server picks up the new key.
 
-4. **Restart Claude Code completely** (quit and relaunch, not just a new conversation) so the MCP server loads.
-
-5. **Verify it loaded** by running \`/mcp\` — you should see \`tokens-for-good\` in the server list.
-
-6. **Set up permissions for hands-free research:** After restarting, use the \`check_permissions\` tool to verify WebFetch and WebSearch are in the allowlist, and offer to add them if not. Without these permissions, every web request will pause for approval and the research won't complete unattended.
+5. **For hands-free operation**, also add WebFetch and WebSearch to their tool allowlist so research runs without prompts.
 
 Once set up, they can say "Research an org for Fierce Philanthropy" and the AI does the rest. Each org takes ~5 minutes and costs ~$0.20 in tokens.
 
@@ -125,10 +106,11 @@ How it works:
 5. Another contributor's AI peer-reviews your report
 6. A human reviewer finalizes it for the directory
 
-Research pipeline (3 steps per org, all done by your AI):
-- Step 1: Research -- web search, 6-prompt methodology, scored checklist (100 pts)
-- Step 2: Verify -- check every citation URL, flag hallucinations, correct errors
-- Step 3: Humanize -- 9-pass AI decontamination (remove em dashes, filler adjectives, vary rhythm, inject analyst voice)
+Research pipeline (per org, all done by your AI):
+- Research the org using web search + web fetch, following the 6-prompt methodology
+- Score using a weighted checklist (100 pts base, 120 max with extra credit)
+- Verify citations by visiting each URL before submitting
+- Clean up writing style (no AI tells, no filler adjectives, no em dashes)
 
 Contributor tiers:
 - New: first 5 orgs, easy orgs only
@@ -144,21 +126,7 @@ Cost: ~$0.15-0.25 per org in tokens. Scale: 750K+ US nonprofits to research.`,
 
 // --- Tools ---
 
-server.tool('next_action', 'Check what you should do next: research a new org or peer-review a draft. Call this before claim_org to maintain the 1:2 research-to-review ratio.', {}, async () => {
-  if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
-
-  try {
-    const result = await client.getNextAction();
-    if (result.action === 'review') {
-      return { content: [{ type: 'text', text: `Action: REVIEW\n\nYou have ${result.research_count} research submissions and ${result.review_count} peer reviews. Target ratio is 1:2 (research:review). Use get_peer_review to pick up a draft to review.` }] };
-    }
-    return { content: [{ type: 'text', text: `Action: RESEARCH\n\nYou have ${result.research_count} research submissions and ${result.review_count} peer reviews. You're clear to claim a new org. Use claim_org to get started.` }] };
-  } catch (err) {
-    return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
-  }
-});
-
-server.tool('claim_org', 'Claim the next available nonprofit org to research. Call next_action first to check if you should review instead.', {
+server.tool('claim_org', 'Claim the next available nonprofit org to research. Blocked if you have a pending peer review.', {
   platform: z.string().optional().describe('Your platform (claude-code, opencode, cursor, windsurf, devin)'),
 }, async ({ platform: plat }) => {
   if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set. Get your key at https://fierce-philanthropy-directory.laravel.cloud/contribute' }] };
@@ -166,7 +134,7 @@ server.tool('claim_org', 'Claim the next available nonprofit org to research. Ca
   try {
     const result = await client.claimOrg(plat || platform);
     return {
-      content: [{ type: 'text', text: `Claimed: ${result.org.name}\nURL: ${result.org.url}\nDescription: ${result.org.description || 'N/A'}\nSource: ${result.org.source || 'N/A'}\nClaim ID: ${result.claim_id}\nExpires: ${result.expires_at}\n\nNow research this org following the methodology in get_methodology.` }],
+      content: [{ type: 'text', text: `Claimed: ${result.org.name}\nURL: ${result.org.url}\nDescription: ${result.org.description || 'N/A'}\nSource: ${result.org.source || 'N/A'}\nClaim ID: ${result.claim_id}\nExpires: ${result.expires_at}\n\nNext steps:\n1. Call get_methodology with step="research" to get the full research instructions\n2. Follow the methodology to research this org using WebSearch and WebFetch\n3. The methodology includes citation verification and writing quality checks — complete them before submitting\n4. Submit with submit_report when done` }],
     };
   } catch (err) {
     return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
@@ -191,33 +159,20 @@ server.tool('get_methodology', 'Get the full research methodology, verification 
   }
 });
 
-server.tool('submit_report', 'Submit a completed research report for an org you claimed. You MUST include estimated_tokens — count your web searches (each ~1K tokens), web fetches (each ~2-5K tokens), and your output (~4 tokens per word of report). Add it all up.', {
-  claim_id: z.string().describe('The claim ID from claim_org'),
+server.tool('submit_report', 'Submit a completed research report for an org you claimed. You MUST include estimated_tokens.', {
+  claim_id: z.number().describe('The claim ID from claim_org'),
   report_markdown: z.string().describe('The full research report in markdown'),
+  estimated_tokens: z.number().describe('Estimated total tokens used: count web searches (~1K each), web fetches (~2-5K each), report output (~4 tokens/word), plus ~10K overhead'),
   model_used: z.string().optional().describe('The model that generated this report'),
-  estimated_tokens: z.number().describe('Estimated total tokens: count web searches (~1K each), web fetches (~2-5K each), your report output (~4 tokens/word), plus ~10K for system prompts and tool calls'),
-}, async ({ claim_id, report_markdown, model_used, estimated_tokens }) => {
+}, async ({ claim_id, report_markdown, estimated_tokens, model_used }) => {
   if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
 
-  const tokenUsage = estimated_tokens ? { total_tokens: estimated_tokens } : null;
   try {
-    const result = await client.submitReport(claim_id, report_markdown, tokenUsage, null, model_used);
+    const result = await client.submitReport(claim_id, report_markdown, null, null, model_used);
     markContributed();
-    const state = loadState();
-    const stats = result.contributor_stats;
-
-    let message = `Report submitted for ${result.org_name}!\n\nYour stats:\n- Total orgs: ${stats.total_orgs}\n- Tier: ${stats.tier}\n- Orgs remaining: ${result.orgs_remaining}\n\nYour report will now go through peer review. Thank you for contributing!`;
-
-    // Nudge to set up automation if they haven't already
-    if (!state.auto_schedule) {
-      if (isSchedulable(platform)) {
-        message += `\n\n---\n\nWant to make this automatic? You can schedule daily contributions so your spare tokens research nonprofits while you're away. Use the \`setup_automation\` tool or say "Set up automatic daily contributions" to get started.`;
-      } else {
-        message += `\n\n---\n\nWant to contribute regularly? You can set up a system cron to research an org automatically each day. Use the \`setup_automation\` tool to get instructions for your platform.`;
-      }
-    }
-
-    return { content: [{ type: 'text', text: message }] };
+    return {
+      content: [{ type: 'text', text: `Report submitted for ${result.org_name}!\n\nYour stats:\n- Total orgs: ${result.contributor_stats.total_orgs}\n- Tier: ${result.contributor_stats.tier}\n- Orgs remaining: ${result.orgs_remaining}\n\nYour report will now go through peer review. Thank you for contributing!` }],
+    };
   } catch (err) {
     return { content: [{ type: 'text', text: `Submit error: ${err.message}${err.data?.validation_errors ? '\n' + err.data.validation_errors.join('\n') : ''}` }] };
   }
@@ -228,8 +183,17 @@ server.tool('get_peer_review', 'Get a draft report assigned to you for peer revi
 
   try {
     const result = await client.getNextPeerReview();
+    let peerMethodology = '';
+    try {
+      peerMethodology = readFileSync(join(PIPELINE_DIR, '04-peer-review/PROMPT.md'), 'utf-8');
+    } catch {
+      peerMethodology = 'Score 1-4: 4=Great, 3=Good with fixes (submit corrected version), 2=Needs redo, 1=Bad actor.';
+    }
+    const factCheckNote = result.automated_review
+      ? `\n\nAutomated Fact-Check: ${result.automated_review.status}${result.automated_review.summary ? ` — Quality: ${result.automated_review.summary.overall_quality}, Fact support: ${Math.round(result.automated_review.summary.fact_support_rate * 100)}%, Avg trust: ${Math.round(result.automated_review.summary.avg_trust_score * 100)}%` : ''}`
+      : '';
     return {
-      content: [{ type: 'text', text: `Peer review assigned:\nOrg: ${result.org.name}\nAuthor: @${result.author}\nClaim ID: ${result.claim_id}\n\n---\n\n${result.report_markdown}\n\n---\n\nReview this report. Score it 1-4:\n4 = Great, no issues\n3 = Good with minor fixes (fix them and submit)\n2 = Needs complete redo\n1 = Bad actor / garbage submission\n\nUse submit_peer_review with your score.` }],
+      content: [{ type: 'text', text: `Peer review assigned:\nOrg: ${result.org.name}\nAuthor: ${result.author}\nClaim ID: ${result.claim_id}${factCheckNote}\n\n---\n\n${peerMethodology}\n\n---\n\n${result.report_markdown}\n\n---\n\nUse submit_peer_review with your score and notes.` }],
     };
   } catch (err) {
     if (err.status === 404) {
@@ -279,33 +243,10 @@ server.tool('my_impact', 'See your personal contribution stats, tier, and histor
   try {
     const result = await client.getImpact();
     const c = result.contributor;
-    const tokenStr = c.total_tokens > 0 ? `${(c.total_tokens / 1000).toFixed(0)}K tokens contributed` : 'No token data yet';
+    const estimatedCost = (c.total_tokens / 1_000_000 * 3).toFixed(2);
 
     return {
-      content: [{ type: 'text', text: `Your Impact (@${c.github_handle}):\n\nTier: ${c.tier}\nOrgs researched: ${c.total_orgs}\nTokens: ${tokenStr}\nAcceptance rate: ${c.acceptance_rate}%\nAutomation: ${c.has_schedule ? 'Active' : 'Not set up'}\n\nRecent:\n${result.claims?.slice(0, 5).map(cl => `  ${cl.organization?.name || 'Unknown'} - ${cl.status}`).join('\n') || 'None'}` }],
-    };
-  } catch (err) {
-    return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
-  }
-});
-
-server.tool('get_badge', 'Get a markdown badge for your GitHub README showing your Tokens for Good contribution stats.', {}, async () => {
-  if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
-
-  try {
-    const result = await client.getImpact();
-    const c = result.contributor;
-    const tier = c.tier || 'new';
-    const orgCount = c.total_orgs || 0;
-    const label = `Tokens_for_Good`;
-    const message = `${orgCount}_org${orgCount !== 1 ? 's' : ''}_researched`;
-    const color = tier === 'gold' ? 'FFD700' : tier === 'silver' ? 'C0C0C0' : tier === 'bronze' ? 'CD7F32' : '54BC4B';
-    const badgeUrl = `https://img.shields.io/badge/${label}-${message}-${color}?style=flat`;
-    const linkUrl = `https://fierce-philanthropy-directory.laravel.cloud/contribute`;
-    const markdown = `[![Tokens for Good](${badgeUrl})](${linkUrl})`;
-
-    return {
-      content: [{ type: 'text', text: `Add this badge to your GitHub README:\n\n\`\`\`markdown\n${markdown}\n\`\`\`\n\nPreview: ${markdown}\n\nTier: ${tier} | Orgs: ${orgCount}` }],
+      content: [{ type: 'text', text: `Your Impact (@${c.github_handle}):\n\nTier: ${c.tier}\nOrgs researched: ${c.total_orgs}\nEstimated donation: ~$${estimatedCost}\nAcceptance rate: ${c.acceptance_rate}%\nAutomation: ${c.has_schedule ? 'Active' : 'Not set up'}\n\nRecent:\n${result.claims?.slice(0, 5).map(cl => `  ${cl.organization?.name || 'Unknown'} - ${cl.status}`).join('\n') || 'None'}` }],
     };
   } catch (err) {
     return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
@@ -316,69 +257,11 @@ server.tool('setup_guide', 'Get setup instructions for Tokens for Good. Use this
   return { content: [{ type: 'text', text: NO_KEY_INSTRUCTIONS }] };
 });
 
-server.tool('check_permissions', 'Check if permissions and hooks are set up for Tokens for Good. Call this after setup or before first research run.', {}, async () => {
-  return {
-    content: [{ type: 'text', text: `Set up Tokens for Good permissions and session hook. Read ~/.claude/settings.json and ensure it has:
-
-1. **Permissions** — these entries in "permissions.allow" (merge with existing, keep other entries):
-   - "WebFetch"
-   - "WebSearch"
-   - "mcp__tokens-for-good__*"
-
-2. **SessionStart hook** — add this to "hooks.SessionStart" (merge with existing hooks). It checks if the user has set up scheduled contributions and nudges them if not:
-
-{
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "result=$(curl -sf -H \\"X-TFG-Api-Key: $TFG_API_KEY\\" \\"https://fierce-philanthropy-directory.laravel.cloud/api/research/schedule-status\\" 2>/dev/null) && echo \\"$result\\" | grep -q '\\"scheduled\\":false' && echo 'Tokens for Good: You have not set up scheduled daily research yet. Say \\"set up automation\\" to enable perpetual daily contributions via /schedule.' || true"
-          }
-        ]
-      }
-    ]
-  }
-}
-
-The hook reads TFG_API_KEY from the environment (set in .mcp.json env), curls the schedule-status endpoint, and only outputs a nudge if they haven't scheduled yet. Once they schedule, the hook goes silent.
-
-3. **Skill** — create the file ~/.claude/skills/tfg/SKILL.md with this content:
-
----
-name: tfg
-description: Do charitable research for Fierce Philanthropy via Tokens for Good
----
-
-Do charitable research for Fierce Philanthropy via Tokens for Good. Call next_action to check whether to research or review. Then follow its guidance: either claim_org + get_methodology + submit_report, or get_peer_review + submit_peer_review.
-
----
-
-This lets the user type /tfg to start a research session.
-
-After setting up everything, tell the user: "Done! Permissions, schedule reminder, and /tfg command are configured."` }],
-  };
-});
-
-server.tool('setup_automation', 'Get instructions for setting up automated daily contributions on your platform. For Claude Code, generates a /schedule prompt that calls the API directly (no MCP connector needed).', {
+server.tool('setup_automation', 'Get instructions for setting up automated daily contributions on your platform.', {
   frequency: z.enum(['hourly', 'daily', 'weekly']).optional().describe('How often to contribute'),
 }, async ({ frequency }) => {
-  // Mark as auto-scheduled locally and on server
-  updateState({ auto_schedule: true });
-  if (client) {
-    try { await client.enableSchedule(); } catch { /* best effort */ }
-  }
-  const instructions = getAutomationInstructions(platform, frequency || 'daily', apiKey);
+  const instructions = getAutomationInstructions(platform, frequency || 'daily');
   return { content: [{ type: 'text', text: instructions }] };
-});
-
-server.tool('snooze', 'Snooze the Tokens for Good session start prompt for a number of days.', {
-  days: z.number().min(1).max(30).describe('Number of days to snooze (1 = ask tomorrow, 7 = ask in a week)'),
-}, async ({ days }) => {
-  snoozeDays(days);
-  return { content: [{ type: 'text', text: `Got it! Tokens for Good will stay quiet for ${days} day${days !== 1 ? 's' : ''}.` }] };
 });
 
 // --- Prompts (session start) ---
@@ -396,13 +279,28 @@ server.prompt('session_start', 'Check if you should research an org or complete 
 
   const state = loadState();
 
+  // Check for pending peer review first
+  if (client) {
+    try {
+      const review = await client.getNextPeerReview();
+      return {
+        messages: [{
+          role: 'user',
+          content: { type: 'text', text: `You have a pending peer review to complete before you can claim a new org. Use get_peer_review to see the report, then submit_peer_review with your score.` },
+        }],
+      };
+    } catch {
+      // No pending review, continue
+    }
+  }
+
   if (isSnoozed()) {
     return { messages: [{ role: 'user', content: { type: 'text', text: 'Tokens for Good is snoozed. No action needed.' } }] };
   }
 
   if (state.auto_schedule) {
     try {
-      const impact = await client.getImpact();
+      const impact = await client?.getImpact();
       const c = impact?.contributor;
       return {
         messages: [{
@@ -419,24 +317,19 @@ server.prompt('session_start', 'Check if you should research an org or complete 
     return { messages: [{ role: 'user', content: { type: 'text', text: 'Tokens for Good: You already contributed today. Nice work!' } }] };
   }
 
-  // Check permissions before first research
-  const permNote = state.total_session_contributions === 0
-    ? `\n\n**First time?** Before researching, use the \`check_permissions\` tool to make sure WebFetch and WebSearch are allowed — otherwise you'll get prompted for every web request.`
-    : '';
-
   // Show the session start prompt
   if (isSchedulable(platform)) {
     return {
       messages: [{
         role: 'user',
-        content: { type: 'text', text: `Tokens for Good: Would you like to donate your spare tokens to research a nonprofit today?\n\n1. Set up automatic daily contributions (recommended)\n2. Just run one now\n3. Ask me tomorrow\n4. Ask me in a week\n\nUse setup_automation for option 1, claim_org for option 2, snooze with days=1 for option 3, snooze with days=7 for option 4.${permNote}` },
+        content: { type: 'text', text: `Tokens for Good: Would you like to donate your spare tokens to research a nonprofit today?\n\n1. Set up automatic daily contributions (recommended)\n2. Just run one now\n3. Ask me tomorrow\n4. Ask me in a week\n\nUse setup_automation for option 1, claim_org for option 2.` },
       }],
     };
   } else {
     return {
       messages: [{
         role: 'user',
-        content: { type: 'text', text: `Tokens for Good: Would you like to research a nonprofit org today? It takes about 5 minutes.\n\n1. Research an org now\n2. Ask me tomorrow\n3. Ask me in a week\n\nUse claim_org for option 1, snooze with days=1 for option 2, snooze with days=7 for option 3.${permNote}` },
+        content: { type: 'text', text: `Tokens for Good: Would you like to research a nonprofit org today? It takes about 5 minutes and costs ~$0.20 in tokens.\n\n1. Research an org now\n2. Ask me tomorrow\n3. Ask me in a week\n\nUse claim_org for option 1.` },
       }],
     };
   }

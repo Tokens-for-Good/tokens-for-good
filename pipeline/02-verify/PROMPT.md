@@ -1,113 +1,69 @@
-# Step 2: Verify — Claude Code Instructions
+# Verify Citations (Standalone Re-verification)
 
-## Inputs
-
-- **Org name:** `{{ORG_NAME}}`
-- **Research report:** The report from Step 1 (kept in memory from the previous step)
-- **Research guidance:** The same methodology from Step 1
-
-## Purpose
-
-Step 1 generated the research report. This step verifies it. You are a fact-checker, not a rewriter. Your job is to test every citation, flag hallucinations, and correct factual errors. Do not change tone, structure, or style.
+Use this methodology when re-verifying an existing report. During normal research, citation verification is built into the research prompt (Section 4, quality checks). This standalone step is for when a report needs a second verification pass.
 
 ## Instructions
 
 ### 1. Read the Report
 
-Read the full research report. Note every inline citation `[Source Name](URL)` and every factual claim (statistics, percentages, study references, program details).
+Read the full research report. Note every inline citation `[Source Name](URL)` and every factual claim.
 
 ### 2. Test Every Citation
 
-For each citation in the report, visit the URL using web fetch and verify:
+For each citation, visit the URL using web fetch and verify:
 
-- [ ] **URL loads** — Is it a real page (not 404, not a redirect to a homepage)?
-- [ ] **Content matches** — Does the source actually say what the report claims? Quote the relevant passage from the source.
-- [ ] **Data is accurate** — Do the numbers in the report match the numbers in the source?
+- **URL loads** — Is it a real page (not 404, not a redirect to a homepage)?
+- **Content matches** — Does the page actually say what the report claims? Quote the relevant passage.
+- **Data is accurate** — Do the numbers match?
 
-Record each citation check in a table:
+Record each check:
 
 | # | Citation | URL Status | Content Match | Notes |
 |---|----------|-----------|---------------|-------|
 
 Status values:
 - **VALID** — URL loads and content matches
-- **BROKEN** — 404, domain not found, or page doesn't load
-- **MISMATCH** — URL loads but doesn't support the claim made in the report
-- **PARTIAL** — URL loads, some claims match, some don't
-- **UNVERIFIABLE** — Paywalled, requires login, or content not accessible
+- **BROKEN** — 404 or page doesn't load
+- **MISMATCH** — URL loads but doesn't support the claim
+- **PARTIAL** — Some claims match, some don't
+- **UNVERIFIABLE** — Paywalled or content not accessible
 
-### 3. Check for Hallucinations
+### 3. Re-attribute Mismatches
 
-Search the web to verify claims that seem suspicious or unusually specific:
+For each MISMATCH or PARTIAL citation:
+1. Use web search to find the correct source for the claim
+2. If found: replace the citation URL with the correct one
+3. If not found anywhere: remove the claim from the report or add a caveat ("This claim could not be independently verified")
 
-- Statistics or percentages that don't appear in any source
-- Named studies, RCTs, or evaluations that can't be found
-- Program details (founding dates, staff names, locations) that contradict other sources
-- Claims about independent evaluations when none exist
+Do not leave misattributed citations in place.
 
-### 4. Flag Factual Issues
+### 4. Check for Hallucinations
 
-For each issue found, log it with severity:
+Search the web for claims that seem unusually specific:
+- Statistics that don't appear in any source
+- Named studies or RCTs that can't be found
+- Program details that contradict other sources
 
-- **[SEVERITY: HIGH]** — Wrong numbers, fabricated sources, broken citation URLs, claims contradicted by evidence
-- **[SEVERITY: MEDIUM]** — Misleading framing, outdated data, partially supported claims
-- **[SEVERITY: LOW]** — Minor inaccuracies, rounding differences, ambiguous wording
+### 5. Apply Corrections
 
-### 5. Write Corrections
-
-For each HIGH or MEDIUM issue, write the exact correction:
+For each issue:
 
 ```
 ### Correction [N]
 **Location:** [First ~10 words of the problematic passage]
 **Problem:** [What's wrong]
-**Original:** [Exact text to replace]
-**Corrected:** [Fixed text]
+**Fix:** [What was changed]
 ```
 
-### 6. Apply Corrections and Produce Output
+### 6. Output
 
-Apply all corrections to produce a verified version of the report. Keep the result in memory for the next pipeline step (Humanize).
-
-Start the output with a verification log:
+Write the corrected report with a verification summary at the top:
 
 ```markdown
-<!-- Verified: {{ORG_NAME}} | Date: [date] -->
-
-# Verification Log
-
-## Citation Check Results
-
-| # | Citation | URL Status | Content Match | Notes |
-|---|----------|-----------|---------------|-------|
-
-## Factual Issues Found
-
-- [List each issue with severity]
-
-## Corrections Applied
-
-- [List each correction made]
-
-## Summary
-
-- Total citations checked: X
+## Verification Summary
+- Citations checked: X
 - Valid: X | Broken: X | Mismatch: X | Partial: X
-- Factual issues: X (High: X, Medium: X, Low: X)
+- Claims removed (unsourced): X
+- Citations re-attributed: X
 - Corrections applied: X
-- Overall accuracy: HIGH / MEDIUM / LOW
-
----
-
-[Full verified report below]
 ```
-
-## Quality Checks
-
-Before writing the output:
-- [ ] Every citation URL was actually visited and checked
-- [ ] The citation table is complete (no citations skipped)
-- [ ] All HIGH and MEDIUM issues have written corrections
-- [ ] Corrections were applied to the report text
-- [ ] No new content was added (only corrections to existing content)
-- [ ] The verification log accurately reflects all checks performed
