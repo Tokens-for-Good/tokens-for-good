@@ -189,9 +189,25 @@ server.tool('get_peer_review', 'Get a draft report assigned to you for peer revi
     } catch {
       peerMethodology = 'Score 1-4: 4=Great, 3=Good with fixes (submit corrected version), 2=Needs redo, 1=Bad actor.';
     }
-    const factCheckNote = result.automated_review
-      ? `\n\nAutomated Fact-Check: ${result.automated_review.status}${result.automated_review.summary ? ` — Quality: ${result.automated_review.summary.overall_quality}, Fact support: ${Math.round(result.automated_review.summary.fact_support_rate * 100)}%, Avg trust: ${Math.round(result.automated_review.summary.avg_trust_score * 100)}%` : ''}`
-      : '';
+    let factCheckNote = '';
+    if (result.automated_review?.summary) {
+      const s = result.automated_review.summary;
+      const lines = [
+        `\n\n## Automated Fact-Check Results`,
+        `Quality: ${s.overall_quality} | Fact support: ${Math.round(s.fact_support_rate * 100)}% | Avg trust: ${Math.round(s.avg_trust_score * 100)}%`,
+        `Facts checked: ${result.automated_review.facts_checked}/${result.automated_review.facts_extracted} | Citations rated: ${result.automated_review.citations_rated}`,
+      ];
+      if (s.red_flags?.length > 0) {
+        lines.push(`\nRed flags:\n${s.red_flags.map(f => `  - ${f}`).join('\n')}`);
+      }
+      if (s.strengths?.length > 0) {
+        lines.push(`\nStrengths:\n${s.strengths.map(f => `  - ${f}`).join('\n')}`);
+      }
+      lines.push(`\nUse these results to focus your spot-checks on flagged areas.`);
+      factCheckNote = lines.join('\n');
+    } else if (result.automated_review) {
+      factCheckNote = `\n\nAutomated Fact-Check: ${result.automated_review.status} (no summary available yet)`;
+    }
     return {
       content: [{ type: 'text', text: `Peer review assigned:\nOrg: ${result.org.name}\nAuthor: ${result.author}\nClaim ID: ${result.claim_id}${factCheckNote}\n\n---\n\n${peerMethodology}\n\n---\n\n${result.report_markdown}\n\n---\n\nUse submit_peer_review with your score and notes.` }],
     };
