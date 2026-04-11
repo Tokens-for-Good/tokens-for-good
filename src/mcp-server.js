@@ -160,7 +160,7 @@ server.tool('get_methodology', 'Get the full research methodology, verification 
 });
 
 server.tool('submit_report', 'Submit a completed research report for an org you claimed. You MUST include estimated_tokens.', {
-  claim_id: z.number().describe('The claim ID from claim_org'),
+  claim_id: z.string().describe('The claim ID from claim_org'),
   report_markdown: z.string().describe('The full research report in markdown'),
   estimated_tokens: z.number().describe('Estimated total tokens used: count web searches (~1K each), web fetches (~2-5K each), report output (~4 tokens/word), plus ~10K overhead'),
   model_used: z.string().optional().describe('The model that generated this report'),
