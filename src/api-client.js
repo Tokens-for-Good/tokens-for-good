@@ -43,13 +43,14 @@ export class ApiClient {
     return this.request('POST', '/research/claim', { platform });
   }
 
-  async submitReport(claimId, reportMarkdown, tokenUsage = null, metrics = null, modelUsed = null) {
+  async submitReport(claimId, reportMarkdown, tokenUsage = null, metrics = null, modelUsed = null, promptVersion = null) {
     return this.request('POST', '/research/submit', {
       claim_id: claimId,
       report_markdown: reportMarkdown,
       token_usage: tokenUsage,
       metrics: metrics,
       model_used: modelUsed,
+      prompt_version: promptVersion,
     });
   }
 

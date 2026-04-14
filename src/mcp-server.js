@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PIPELINE_DIR = join(__dirname, '..', 'pipeline');
+const PKG_VERSION = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8')).version;
 
 const apiKey = process.env.TFG_API_KEY;
 let client;
@@ -168,7 +169,7 @@ server.tool('submit_report', 'Submit a completed research report for an org you 
   if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
 
   try {
-    const result = await client.submitReport(claim_id, report_markdown, null, null, model_used);
+    const result = await client.submitReport(claim_id, report_markdown, null, null, model_used, PKG_VERSION);
     markContributed();
     return {
       content: [{ type: 'text', text: `Report submitted for ${result.org_name}!\n\nYour stats:\n- Total orgs: ${result.contributor_stats.total_orgs}\n- Tier: ${result.contributor_stats.tier}\n- Orgs remaining: ${result.orgs_remaining}\n\nYour report will now go through peer review. Thank you for contributing!` }],
