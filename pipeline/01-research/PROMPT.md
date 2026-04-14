@@ -66,6 +66,7 @@ Keep the table with all columns. For each of the 20 negative consequences, add a
 - When Yes or Partial: include SPECIFIC data (percentages, sample sizes, time periods, study names)
 - Only direct results from this organization, not from other orgs or modeling
 - **CITATION RULES (critical):** Every data point MUST have its own inline citation `[Source Name](URL)`. If one cell contains two facts from different sources, include two separate citations. Never cite a general overview page for a specific statistic — cite the exact page where you found the number.
+- **VERIFY INLINE:** After writing each cell, re-read the source you cited and confirm the exact numbers match. If the source says 75% and you wrote 59%, fix it before moving on. Do not proceed to the next row until the current row's numbers are confirmed against the cited page.
 
 #### PROMPT 5 — Counterfactual Results
 
@@ -74,7 +75,7 @@ Keep the table with ALL previous columns. For each of the 20 negative consequenc
 - Start each cell with "Yes.", "Partial.", or "No counterfactual results."
 - Describe study design (RCT, quasi-experimental, matched comparison), sample sizes, what the control/comparison group showed
 - Counterfactual = comparison to what would have happened without the intervention. Before/after alone does not count.
-- **Same citation rules as Prompt 4:** every data point gets its own inline citation to the specific page.
+- **Same citation and verify-inline rules as Prompt 4:** every data point gets its own inline citation, and confirm numbers match the source before moving to the next row.
 
 #### SUMMARY REPORT
 
@@ -134,7 +135,7 @@ These rules are critical for report quality. Poorly attributed citations are the
 
 3. **If you can't find a URL for a claim, don't include the claim.** No unsourced facts. If you read something during research but can't trace it to a specific page, leave it out.
 
-4. **Verify before citing.** After writing a claim with a citation, confirm the cited page actually contains that information. If it doesn't, find the correct source or remove the claim.
+4. **Verify numbers match the source exactly.** After writing a claim with a number (percentage, dollar amount, count), re-read the cited page and confirm the exact figure appears there. Common errors: writing 59% when the source says 75%, writing 4,000 when the source says 1,651, or writing 20% when the source says 25%. If your number doesn't match, use the source's number or remove the claim.
 
 5. **Attribution matters.** Say "X reports that" when citing an org's own claims. Say "independent evaluation found" when citing third-party evidence. The distinction is load-bearing.
 
@@ -152,7 +153,7 @@ Run these checks before submitting. They are not optional.
 
 **Citations:**
 - [ ] Every factual claim has its own inline citation
-- [ ] Spot-check at least 5 citations: visit the URL and confirm the page says what you claim
+- [ ] Spot-check at least 5 citations: visit the URL and confirm the EXACT numbers on the page match what you wrote. If the source says 132% and you wrote 136%, fix it.
 - [ ] For any citation where the page doesn't support your claim, find the correct source or remove the claim
 - [ ] No claims are cited to general overview pages when a specific report or data page exists
 
