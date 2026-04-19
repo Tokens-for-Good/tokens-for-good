@@ -60,7 +60,11 @@ Once installed, these are available to your AI via the MCP server:
 - **OpenCode** — `init` writes `~/.config/opencode/opencode.json` and prints a cron line you can paste into `crontab -e`.
 - **Cursor / Windsurf / Devin** — `init` writes the MCP config; automation requires platform-native scheduling.
 
-## Development
+## Contributing
+
+TFG has been built and tested primarily on **Claude Code**. Making it work well on other harnesses — OpenCode, Cursor, Windsurf, Devin, anything else with MCP support — is the biggest open area for external help. See [CONTRIBUTING.md](CONTRIBUTING.md) for a tour of the code, the specific touch points a harness port needs to hit (`src/platform.js`, `src/init.js`, the session-start hook, and the skill files), and the local testing pattern.
+
+For quick dev setup:
 
 ```bash
 git clone https://github.com/Tokens-for-Good/tokens-for-good
