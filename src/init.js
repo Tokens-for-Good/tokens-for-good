@@ -7,6 +7,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { fileURLToPath } from 'url';
+import { spawnSync } from 'child_process';
 import { detectPlatform } from './platform.js';
 import { loadState, saveState } from './state.js';
 
@@ -238,13 +239,42 @@ function writeSessionStartHook() {
       matcher: '',
       hooks: [{
         type: 'command',
-        command: IS_WINDOWS
-          ? 'cmd /c npx -y tokens-for-good session-start-hook'
-          : 'npx -y tokens-for-good session-start-hook',
+        command: hookCommand(),
       }],
     });
   }
   writeJson(abs, cfg);
+}
+
+// Claude Code runs SessionStart hooks under Git Bash on Windows with a
+// stripped PATH that typically does not include C:\Program Files\nodejs,
+// so a bare `npx` lookup fails silently. Resolve the absolute npx path at
+// init time (when the user's full PATH is available) and bake it into the
+// hook command so it works regardless of Claude Code's hook-runner PATH.
+function hookCommand() {
+  if (!IS_WINDOWS) return 'npx -y tokens-for-good session-start-hook';
+
+  const npxPath = resolveWindowsNpxPath();
+  // Bash accepts double-quoted paths with spaces; escape backslashes for JSON.
+  return `"${npxPath}" -y tokens-for-good session-start-hook`;
+}
+
+function resolveWindowsNpxPath() {
+  // First try `where npx.cmd` — most reliable when PATH is correct.
+  try {
+    const r = spawnSync('where', ['npx.cmd'], { encoding: 'utf-8' });
+    if (r.status === 0) {
+      const first = r.stdout.trim().split(/\r?\n/)[0];
+      if (first && existsSync(first)) return first;
+    }
+  } catch { /* fall through */ }
+
+  // Fallback: npx.cmd usually sits alongside node.exe.
+  const alongside = join(dirname(process.execPath), 'npx.cmd');
+  if (existsSync(alongside)) return alongside;
+
+  // Last-resort guess — user's hook may need manual edit if this is wrong.
+  return 'C:\\Program Files\\nodejs\\npx.cmd';
 }
 
 function writeSkillFile(name) {
