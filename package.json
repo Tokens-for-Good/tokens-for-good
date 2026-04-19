@@ -1,6 +1,6 @@
 {
   "name": "tokens-for-good",
-  "version": "0.3.8",
+  "version": "0.4.0",
   "type": "module",
   "description": "Donate your spare AI tokens to research nonprofits for Fierce Philanthropy",
   "bin": {
@@ -10,6 +10,7 @@
   "files": [
     "src/",
     "pipeline/",
+    "skills/",
     "LICENSE"
   ],
   "scripts": {
@@ -27,6 +28,7 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "prompts": "^2.4.2",
     "zod": "^4.3.6"
   }
 }

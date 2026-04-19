@@ -1,14 +1,23 @@
 #!/usr/bin/env node
 
-// CLI entry point for tokens-for-good
+// CLI entry point for tokens-for-good.
 // Usage:
-//   npx tokens-for-good --mcp    Start as MCP server (default)
-//   npx tokens-for-good --status Show project status
-//   npx tokens-for-good --impact Show your contribution stats
+//   npx tokens-for-good init                  Interactive first-time setup
+//   npx tokens-for-good session-start-hook    SessionStart hook (used by Claude Code)
+//   npx tokens-for-good --mcp                 Start as MCP server (default)
+//   npx tokens-for-good --status              Show project status
+//   npx tokens-for-good --impact              Show your contribution stats
 
 const args = process.argv.slice(2);
+const first = args[0];
 
-if (args.includes('--status')) {
+if (first === 'init') {
+  const { runInit } = await import('./init.js');
+  await runInit();
+} else if (first === 'session-start-hook') {
+  const { runSessionStartHook } = await import('./session-start-hook.js');
+  runSessionStartHook();
+} else if (args.includes('--status') || first === 'status') {
   const { ApiClient } = await import('./api-client.js');
   try {
     const client = new ApiClient(process.env.TFG_API_KEY || 'public');
@@ -28,7 +37,7 @@ if (args.includes('--status')) {
   } catch (err) {
     console.error('Error:', err.message);
   }
-} else if (args.includes('--impact')) {
+} else if (args.includes('--impact') || first === 'impact') {
   const { ApiClient } = await import('./api-client.js');
   try {
     const client = new ApiClient(process.env.TFG_API_KEY);

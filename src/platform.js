@@ -42,7 +42,7 @@ export function getAutomationInstructions(platform, frequency = 'daily', apiKey 
     case 'claude-code':
       return `Set up automated contributions with Claude Code's /schedule command.
 
-Since /schedule runs remotely (without local MCP access), it calls the API directly.
+(The /tfg-schedule skill does these 3 steps automatically. If you're reading this because Claude is orchestrating /tfg-schedule, extract the prompt between the --- markers and invoke /schedule with frequency="${frequency}" and that prompt.)
 
 **Step 1:** Run this in Claude Code:
 \`\`\`
@@ -51,7 +51,7 @@ Since /schedule runs remotely (without local MCP access), it calls the API direc
 
 **Step 2:** Set frequency to "${frequency}"
 
-**Step 3:** When prompted for the task description, paste this prompt:
+**Step 3:** When prompted for the task description, paste the prompt between the --- markers below:
 
 ---
 ${apiKey ? getSchedulePrompt(apiKey) : 'Error: API key not available. Set TFG_API_KEY environment variable.'}

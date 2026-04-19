@@ -4,14 +4,32 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { ApiClient } from './api-client.js';
 import { detectPlatform, isSchedulable, getAutomationInstructions } from './platform.js';
-import { loadState, updateState, isSnoozed, snoozeDays, hasContributedToday, markContributed } from './state.js';
-import { readFileSync } from 'fs';
+import { loadState, updateState, isSnoozed, hasContributedToday, markContributed, markSetupComplete } from './state.js';
+import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { homedir } from 'os';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PIPELINE_DIR = join(__dirname, '..', 'pipeline');
 const PKG_VERSION = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8')).version;
+const STATE_FILE = join(homedir(), '.tokens-for-good', 'state.json');
+
+const INIT_GUARD_MESSAGE = `Tokens for Good setup isn't complete on this machine yet.
+
+Tell the user to run this in their terminal (not in Claude), then restart Claude Code:
+
+  npx tokens-for-good init
+
+The init command asks them to choose a contribution cadence (hourly / daily / weekly / one-off) and wires up everything else automatically. It takes about 30 seconds.`;
+
+// Gate: only fires for genuinely cold installs where state.json is missing
+// entirely. Existing users — including those on the pre-0.4.0 schema — pass
+// through untouched. Init writes state.json on first successful completion,
+// so after that this never fires again.
+function notInitialized() {
+  return !existsSync(STATE_FILE);
+}
 
 const apiKey = process.env.TFG_API_KEY;
 let client;
@@ -27,68 +45,24 @@ updateState({ platform });
 
 const server = new McpServer({
   name: 'tokens-for-good',
-  version: '0.1.0',
+  version: PKG_VERSION,
 });
 
 // --- No-key onboarding message ---
 
-const NO_KEY_INSTRUCTIONS = `This user has installed the Tokens for Good MCP server but hasn't set up their API key yet.
+const NO_KEY_INSTRUCTIONS = `The user wants to set up Tokens for Good. Tell them to run this in their terminal (not here in Claude), then restart Claude Code:
 
-Walk them through setup:
+  npx tokens-for-good init
 
-1. **Create an account:** Go to https://fierce-philanthropy-directory.laravel.cloud/contribute and click "Sign up with GitHub" (one click, free).
+The command walks them through everything in under a minute:
+1. Create an account at https://fierce-philanthropy-directory.laravel.cloud/contribute (GitHub OAuth, free)
+2. Copy their API key (starts with \`tfg_live_\`) and paste it into the init prompt
+3. Pick a cadence: **daily** (recommended), weekly, hourly, or one-off
+4. Confirm
 
-2. **Copy the API key:** After signing up, they'll see an API key starting with \`tfg_live_\`. Copy it immediately -- it's only shown once.
+init writes everything — MCP config, SessionStart hook, /tfg and /tfg-schedule skills, and their recorded preference — in one shot. The first Claude Code session after init runs their chosen flow automatically.
 
-3. **Add the key to their MCP config:** Update their tokens-for-good MCP configuration to include the key as an environment variable:
-
-For Claude Code (.mcp.json or settings.json):
-\`\`\`json
-{
-  "mcpServers": {
-    "tokens-for-good": {
-      "command": "npx",
-      "args": ["-y", "tokens-for-good", "--mcp"],
-      "env": { "TFG_API_KEY": "tfg_live_their_key_here" }
-    }
-  }
-}
-\`\`\`
-
-For Opencode (opencode.json):
-\`\`\`json
-{
-  "mcp": {
-    "tokens-for-good": {
-      "type": "local",
-      "command": ["npx", "-y", "tokens-for-good", "--mcp"],
-      "environment": { "TFG_API_KEY": "tfg_live_their_key_here" }
-    }
-  }
-}
-\`\`\`
-
-For Cursor (.cursor/mcp.json):
-\`\`\`json
-{
-  "mcpServers": {
-    "tokens-for-good": {
-      "command": "npx",
-      "args": ["-y", "tokens-for-good", "--mcp"],
-      "env": { "TFG_API_KEY": "tfg_live_their_key_here" }
-    }
-  }
-}
-\`\`\`
-
-4. **Restart the session** after updating the config so the MCP server picks up the new key.
-
-5. **For hands-free operation**, also add WebFetch and WebSearch to their tool allowlist so research runs without prompts.
-
-Once set up, they can say "Research an org for Fierce Philanthropy" and the AI does the rest. Each org takes ~5 minutes and costs ~$0.20 in tokens.
-
-**What is Tokens for Good?**
-Tokens for Good lets developers donate their spare AI subscription tokens to research nonprofit organizations for Fierce Philanthropy's social impact directory. It's like Folding@Home but for AI tokens -- crowdsourced compute for social good. Contributors get credit on a public leaderboard and on the org pages they research.`;
+**What is Tokens for Good?** A way for developers to donate their spare AI subscription tokens to research nonprofit organizations for Fierce Philanthropy's social impact directory. Each org takes ~5 minutes and ~$0.20 in tokens. Contributors get credit on a public leaderboard.`;
 
 // --- Resources ---
 
@@ -130,6 +104,7 @@ Cost: ~$0.15-0.25 per org in tokens. Scale: 750K+ US nonprofits to research.`,
 server.tool('claim_org', 'Claim the next available nonprofit org to research. Blocked if you have a pending peer review.', {
   platform: z.string().optional().describe('Your platform (claude-code, opencode, cursor, windsurf, devin)'),
 }, async ({ platform: plat }) => {
+  if (notInitialized()) return { content: [{ type: 'text', text: INIT_GUARD_MESSAGE }] };
   if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set. Get your key at https://fierce-philanthropy-directory.laravel.cloud/contribute' }] };
 
   try {
@@ -171,6 +146,14 @@ server.tool('submit_report', 'Submit a completed research report for an org you 
   try {
     const result = await client.submitReport(claim_id, report_markdown, null, null, model_used, PKG_VERSION);
     markContributed();
+
+    // One-off users: first successful submit completes their initial setup,
+    // so the SessionStart hook stops prompting from the next session onward.
+    const state = loadState();
+    if (state.intended_flow === 'one_off' && !state.first_setup_complete) {
+      markSetupComplete();
+    }
+
     return {
       content: [{ type: 'text', text: `Report submitted for ${result.org_name}!\n\nYour stats:\n- Total orgs: ${result.contributor_stats.total_orgs}\n- Tier: ${result.contributor_stats.tier}\n- Orgs remaining: ${result.orgs_remaining}\n\nYour report will now go through peer review. Thank you for contributing!` }],
     };
@@ -274,11 +257,17 @@ server.tool('setup_guide', 'Get setup instructions for Tokens for Good. Use this
   return { content: [{ type: 'text', text: NO_KEY_INSTRUCTIONS }] };
 });
 
-server.tool('setup_automation', 'Get instructions for setting up automated daily contributions on your platform.', {
+server.tool('setup_automation', 'Get the scheduled-research prompt + setup instructions for the user\'s platform. Usually called by the /tfg-schedule skill (which extracts the prompt and invokes /schedule). Safe to call directly too — returns human-readable instructions.', {
   frequency: z.enum(['hourly', 'daily', 'weekly']).optional().describe('How often to contribute'),
 }, async ({ frequency }) => {
-  const instructions = getAutomationInstructions(platform, frequency || 'daily');
+  if (notInitialized()) return { content: [{ type: 'text', text: INIT_GUARD_MESSAGE }] };
+  const instructions = getAutomationInstructions(platform, frequency || 'daily', apiKey);
   return { content: [{ type: 'text', text: instructions }] };
+});
+
+server.tool('mark_setup_complete', 'Called by the /tfg-schedule skill after /schedule confirms, or by the /tfg skill after a successful first submission. Flips local state so the SessionStart hook stops emitting first-session instructions. Idempotent — safe to call multiple times.', {}, async () => {
+  markSetupComplete();
+  return { content: [{ type: 'text', text: 'Marked setup complete. The SessionStart hook will go silent from the next session.' }] };
 });
 
 // --- Prompts (session start) ---
@@ -339,7 +328,7 @@ server.prompt('session_start', 'Check if you should research an org or complete 
     return {
       messages: [{
         role: 'user',
-        content: { type: 'text', text: `Tokens for Good: Would you like to donate your spare tokens to research a nonprofit today?\n\n1. Set up automatic daily contributions (recommended)\n2. Just run one now\n3. Ask me tomorrow\n4. Ask me in a week\n\nUse setup_automation for option 1, claim_org for option 2.` },
+        content: { type: 'text', text: `Tokens for Good: Would you like to donate your spare tokens to research a nonprofit today?\n\n1. Set up automatic daily contributions (recommended) — run /tfg-schedule\n2. Just run one now — run /tfg\n3. Ask me tomorrow\n4. Ask me in a week` },
       }],
     };
   } else {

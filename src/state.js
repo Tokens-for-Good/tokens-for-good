@@ -12,6 +12,10 @@ const DEFAULT_STATE = {
   auto_schedule: false,
   platform: null,
   total_session_contributions: 0,
+  intended_flow: null,          // 'scheduled' | 'one_off' | null (pre-init)
+  intended_frequency: null,     // 'hourly' | 'daily' | 'weekly' | null
+  first_setup_complete: false,  // flipped by mark_setup_complete tool after first scheduled run or first one-off submit
+  installed_at: null,           // ISO timestamp when init finished
 };
 
 export function loadState() {
@@ -68,4 +72,13 @@ export function markContributed() {
   state.last_contributed = new Date().toISOString();
   state.total_session_contributions = (state.total_session_contributions || 0) + 1;
   saveState(state);
+}
+
+export function markSetupComplete() {
+  updateState({ first_setup_complete: true });
+}
+
+export function isInitialized() {
+  const state = loadState();
+  return state.intended_flow !== null;
 }
