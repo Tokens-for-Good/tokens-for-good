@@ -4,7 +4,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { ApiClient } from './api-client.js';
 import { detectPlatform, isSchedulable, getAutomationInstructions } from './platform.js';
-import { loadState, updateState, isSnoozed, hasContributedToday, markContributed, markSetupComplete } from './state.js';
+import { loadState, updateState, isSnoozed, snoozeDays, hasContributedToday, markContributed, markSetupComplete } from './state.js';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -144,7 +144,7 @@ server.tool('submit_report', 'Submit a completed research report for an org you 
   if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
 
   try {
-    const result = await client.submitReport(claim_id, report_markdown, null, null, model_used, PKG_VERSION);
+    const result = await client.submitReport(claim_id, report_markdown, estimated_tokens, null, model_used, PKG_VERSION);
     markContributed();
 
     // One-off users: first successful submit completes their initial setup,
@@ -205,7 +205,7 @@ server.tool('get_peer_review', 'Get a draft report assigned to you for peer revi
 
 server.tool('submit_peer_review', 'Submit your peer review score for a report.', {
   claim_id: z.string().describe('The claim ID of the report being reviewed'),
-  score: z.number().min(1).max(4).describe('Score: 4=great, 3=good with fixes, 2=needs redo, 1=bad actor'),
+  score: z.number().int().min(1).max(4).describe('Score: 4=great, 3=good with fixes, 2=needs redo, 1=bad actor'),
   notes: z.string().optional().describe('Review notes explaining the score'),
   updated_report: z.string().optional().describe('If score is 3, the fixed version of the report'),
 }, async ({ claim_id, score, notes, updated_report }) => {
@@ -270,6 +270,13 @@ server.tool('mark_setup_complete', 'Called by the /tfg-schedule skill after /sch
   return { content: [{ type: 'text', text: 'Marked setup complete. The SessionStart hook will go silent from the next session.' }] };
 });
 
+server.tool('snooze', 'Snooze Tokens for Good reminders. Call this when the user says to remind them tomorrow, next week, or in N days.', {
+  days: z.number().int().min(1).max(365).describe('Days to snooze (1 = tomorrow, 7 = next week)'),
+}, async ({ days }) => {
+  snoozeDays(days);
+  return { content: [{ type: 'text', text: `Got it — Tokens for Good will stay quiet for ${days} day${days === 1 ? '' : 's'}.` }] };
+});
+
 // --- Prompts (session start) ---
 
 server.prompt('session_start', 'Check if you should research an org or complete a peer review', {}, async () => {
@@ -286,18 +293,16 @@ server.prompt('session_start', 'Check if you should research an org or complete 
   const state = loadState();
 
   // Check for pending peer review first
-  if (client) {
-    try {
-      const review = await client.getNextPeerReview();
-      return {
-        messages: [{
-          role: 'user',
-          content: { type: 'text', text: `You have a pending peer review to complete before you can claim a new org. Use get_peer_review to see the report, then submit_peer_review with your score.` },
-        }],
-      };
-    } catch {
-      // No pending review, continue
-    }
+  try {
+    await client.getNextPeerReview();
+    return {
+      messages: [{
+        role: 'user',
+        content: { type: 'text', text: `You have a pending peer review to complete before you can claim a new org. Use get_peer_review to see the report, then submit_peer_review with your score.` },
+      }],
+    };
+  } catch {
+    // No pending review, continue
   }
 
   if (isSnoozed()) {

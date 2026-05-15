@@ -53,19 +53,8 @@ List the top 20 negative consequences of that social problem for that population
 #### PROMPT 3 — Intermediary vs Ultimate Outcome Classification
 
 Keep all 20 items. Add a column classifying each as Intermediary or Ultimate Outcome.
-
-**Definitions:**
-- **Intermediary:** changes in behavior, action, or resources that result from the intervention but don't yet prove lives improved (e.g., increased income, employment, school enrollment, access to healthcare, consumption)
-- **Ultimate:** changes in condition or life status that directly reflect well-being improvements (e.g., improved health, housing security, quality of life, food security)
-
-**Edge cases — apply these exactly:**
-- Getting healthcare = Intermediary. Health actually improving = Ultimate.
-- Income going up = Intermediary. Using that income to improve housing, education, or health = Ultimate.
-- Moving out of poverty = Intermediary. Well-being or quality of life improving because of it = Ultimate.
-- Increased farm yield = Intermediary. Enhanced food security = Ultimate.
-- Increased access to most anything = Intermediary (we don't know if life improved because of that access).
-- School learning outcomes or completing school = Intermediary. Quality of life changing due to a better job from those outcomes = Ultimate.
-- Asset changes = Intermediary unless we know specifically what the asset is and how it improves life (safer housing, a latrine, durable productive tools = Ultimate; generic "asset score" or "asset holdings" = Intermediary).
+- **Intermediary:** changes in behavior or action from gains in knowledge, skills, or attitudes
+- **Ultimate:** changes in condition or life status (reduced poverty, improved health, economic stability)
 
 Sort by Intermediary first, then Ultimate.
 
@@ -94,33 +83,36 @@ Keep the table with ALL previous columns. For each of the 20 negative consequenc
 
 Write a recommendation (2-4 sentences): lead with stance, state strongest evidence, note caveats if any.
 
-**Section 2 — Scorecard**
+Then include this scored checklist. Base score is out of 100. Counterfactuals are extra credit (max 120).
 
+Base score (out of 100):
 - [x] or [ ] a. Has Ultimate Outcome Goals (50 pts)
 - [x] or [ ] b. Measures Intermediate Outcomes (10 pts)
 - [x] or [ ] c. Measures Ultimate Outcomes (15 pts)
 - [x] or [ ] d. Shows Continual Learning & Adaptation (25 pts)
+
+Extra credit:
 - [x] or [ ] e. Measures Intermediate Counterfactual (10 pts)
 - [x] or [ ] f. Measures Ultimate Counterfactual (10 pts)
 
-**Score: [X]/120**
+**Score: [X]/100** (can exceed 100 with extra credit, max 120)
 
-**Section 3 — The Social Problem**
+**Section 2 — The Social Problem**
 Frame with specificity ("chronic malnutrition among children under 5 in rural sub-Saharan Africa", not just "poverty"). Include scale and cite prevalence data.
 
-**Section 4 — The Solution**
+**Section 3 — The Solution**
 What the organization actually does (not their mission statement). Explain the theory of change: how does activity X lead to outcome Y? Be specific about the intervention.
 
-**Section 5 — Key Outputs**
+**Section 4 — Key Outputs**
 Measured activities and direct products with specific numbers. Distinguish outputs (things produced) from outcomes (changes caused).
 
-**Section 6 — Key Intermediate Outcomes**
+**Section 5 — Key Intermediate Outcomes**
 Measurable short-to-medium term changes. Note whether data is self-reported or independently verified. Include any counterfactual data found.
 
-**Section 7 — Key Ultimate Outcomes**
+**Section 6 — Key Ultimate Outcomes**
 Long-term impact evidence only. This section may be thin. Do not pad it. If no ultimate outcome data exists, say so in one sentence.
 
-**Section 8 — Continual Learning & Adaptation**
+**Section 7 — Continual Learning & Adaptation**
 Documented program changes based on evidence. "They adapted" needs specifics: what changed, based on what data, when?
 
 #### SOURCES
@@ -155,7 +147,7 @@ Run these checks before submitting. They are not optional.
 
 **Structure:**
 - [ ] All 5 prompt tables present and complete (20 rows each)
-- [ ] All 8 summary sections present with substantive content
+- [ ] All 7 summary sections present with substantive content
 - [ ] SOURCES section lists every URL cited inline
 - [ ] Scored checklist adds up correctly
 
@@ -172,7 +164,6 @@ Run these checks before submitting. They are not optional.
 - [ ] Replace "leverage" with "use", "utilize" with "use"
 - [ ] Paragraphs under 4 sentences
 - [ ] No superlatives unless backed by comparative data
-- [ ] Every acronym defined in full before first use (e.g., "Randomized Controlled Trial (RCT)" not just "RCT")
 
 ### 5. Submit
 

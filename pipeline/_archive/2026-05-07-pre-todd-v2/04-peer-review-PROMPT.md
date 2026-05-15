@@ -31,7 +31,7 @@ Pick 3-5 citation URLs from the report (prioritize any flagged by the automated 
 
 Verify:
 - [ ] All 5 prompt sections present (PROMPT 1-5) with 20 rows each
-- [ ] All 8 summary sections present (Sections 1-8)
+- [ ] All 7 summary sections present (Sections 1-7)
 - [ ] SOURCES section exists with citations
 - [ ] Every factual claim has its own inline citation `[Source Name](URL)`
 - [ ] No claims cited to general overview pages when a specific report or data page exists
@@ -40,14 +40,17 @@ Verify:
 
 The scored checklist uses these weights. Verify the math and the evidence:
 
+Base score (out of 100):
 - a. Has Ultimate Outcome Goals (50 pts)
 - b. Measures Intermediate Outcomes (10 pts)
 - c. Measures Ultimate Outcomes (15 pts)
 - d. Shows Continual Learning & Adaptation (25 pts)
+
+Extra credit:
 - e. Measures Intermediate Counterfactual (10 pts)
 - f. Measures Ultimate Counterfactual (10 pts)
 
-**Score: X/120**
+**Score: X/100** (can exceed 100 with extra credit, max 120)
 
 Check:
 - Are checked items supported by evidence in the report?
@@ -62,7 +65,6 @@ Check:
 - Sections that are empty or trivially short
 - Claims that contradict other parts of the report
 - Em dashes, filler adjectives (robust, comprehensive, innovative), AI transitions
-- Acronyms used before being defined in full (e.g., "RCT" without first writing "Randomized Controlled Trial (RCT)")
 
 ### 7. Assign a Score
 

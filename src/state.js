@@ -78,6 +78,7 @@ export function markSetupComplete() {
   updateState({ first_setup_complete: true });
 }
 
+
 export function isInitialized() {
   const state = loadState();
   return state.intended_flow !== null;

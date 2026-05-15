@@ -167,7 +167,16 @@ function statePath()            { return homeRelative(join(homedir(), '.tokens-f
 
 function readJsonOrEmpty(path) {
   if (!existsSync(path)) return {};
-  try { return JSON.parse(readFileSync(path, 'utf-8')); } catch { return {}; }
+  const raw = readFileSync(path, 'utf-8');
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error(
+      `${path} exists but is not valid JSON.\n` +
+      `Fix or delete the file, then re-run init.\n` +
+      `(Tip: paste it into https://jsonlint.com to find the syntax error.)`
+    );
+  }
 }
 
 function ensureDir(path) {
