@@ -6,19 +6,22 @@ export function detectPlatform() {
   if (process.env.DEVIN) return 'devin';
   if (process.env.CURSOR_SESSION) return 'cursor';
   if (process.env.WINDSURF_SESSION) return 'windsurf';
+  // Qwen Code doesn't reliably export a parent-identifying env var, so we
+  // fall through to the parent-process heuristic for it.
 
   const parentName = process.env._ || process.env.PARENT_PROCESS || '';
   if (parentName.includes('claude')) return 'claude-code';
   if (parentName.includes('opencode')) return 'opencode';
   if (parentName.includes('cursor')) return 'cursor';
   if (parentName.includes('windsurf')) return 'windsurf';
+  if (parentName.includes('qwen')) return 'qwen-code';
 
   // Default to claude-code since it's the primary MCP host
   return 'claude-code';
 }
 
 export function isSchedulable(platform) {
-  return ['claude-code', 'opencode', 'devin'].includes(platform);
+  return ['claude-code', 'opencode', 'devin', 'qwen-code'].includes(platform);
 }
 
 export function getSchedulePrompt(apiKey) {
@@ -73,6 +76,16 @@ Configure a ${frequency} recurring session with the prompt:
 "Research a nonprofit org for Fierce Philanthropy using the tokens-for-good MCP tools."
 
 Devin runs in the cloud, fully autonomous.`;
+
+    case 'qwen-code':
+      return `Set up automated contributions on Qwen Code.
+
+Qwen Code v0.14+ has experimental built-in cron — enable it with QWEN_CODE_ENABLE_CRON=1 (or "experimental.cron": true in ~/.qwen/settings.json) and then use the Cron tool / /loop skill.
+
+For a portable option, use a system cron job (add via crontab -e):
+${getCronExpression(frequency)} cd /path/to/workspace && qwen --prompt "Research a nonprofit org for Fierce Philanthropy using the tokens-for-good MCP tools. Claim an org, research it, then submit the report."
+
+Your machine must stay on for system cron to run.`;
 
     default:
       return getAutomationInstructions('claude-code', frequency, apiKey);

@@ -2,7 +2,7 @@
 
 Donate your spare AI tokens to research nonprofit organizations for [Fierce Philanthropy](https://fierce-philanthropy-directory.laravel.cloud)'s social impact directory. Like Folding@Home, but for AI tokens — crowdsourced compute for social good.
 
-Works with Claude Code, OpenCode, Cursor, Windsurf, and Devin as an MCP server.
+Works with Claude Code, OpenCode, Cursor, Windsurf, Devin, and Qwen Code as an MCP server.
 
 ## Quickstart
 
@@ -58,6 +58,7 @@ Once installed, these are available to your AI via the MCP server:
 ## Non-Claude-Code platforms
 
 - **OpenCode** — `init` writes `~/.config/opencode/opencode.json` and prints a cron line you can paste into `crontab -e`.
+- **Qwen Code** — `init` writes `~/.qwen/settings.json` (preserving other keys) plus a `/tfg` slash command at `~/.qwen/commands/tfg.md`. For recurring runs, enable Qwen Code's experimental cron (`QWEN_CODE_ENABLE_CRON=1`) or use a system cron line.
 - **Cursor / Windsurf / Devin** — `init` writes the MCP config; automation requires platform-native scheduling.
 
 ## Contributing

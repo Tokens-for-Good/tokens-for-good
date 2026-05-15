@@ -28,6 +28,7 @@ const PLATFORM_CHOICES = [
   { title: 'Cursor',       value: 'cursor' },
   { title: 'Windsurf',     value: 'windsurf' },
   { title: 'Devin',        value: 'devin' },
+  { title: 'Qwen Code',    value: 'qwen-code' },
 ];
 
 const onCancel = () => {
@@ -110,6 +111,9 @@ export async function runInit() {
     console.log(`✓ ${plans[2].label}`);
     writeSkillFile('tfg');
     console.log(`✓ ${plans[3].label}`);
+  } else if (platform === 'qwen-code') {
+    writeQwenCommand('tfg');
+    console.log(`✓ ${plans[1].label}`);
   }
 
   saveState({
@@ -137,6 +141,8 @@ function planWrites(platform) {
     plans.push({ label: `${settingsPath()}  (SessionStart hook)` });
     plans.push({ label: `${skillPath('tfg-schedule')}  (/tfg-schedule skill)` });
     plans.push({ label: `${skillPath('tfg')}  (/tfg skill)` });
+  } else if (platform === 'qwen-code') {
+    plans.push({ label: `${qwenCommandPath('tfg')}  (/tfg slash command)` });
   }
   plans.push({ label: `${statePath()}  (recorded choice)` });
   return plans;
@@ -149,26 +155,13 @@ function homeRelative(abs) {
 }
 
 function mcpConfigPath(platform) {
-  const abs = (() => {
-    switch (platform) {
-      case 'opencode':
-        return join(homedir(), '.config', 'opencode', 'opencode.json');
-      case 'cursor':
-        return join(process.cwd(), '.cursor', 'mcp.json');
-      case 'windsurf':
-        return join(homedir(), '.codeium', 'windsurf', 'mcp_config.json');
-      case 'devin':
-      case 'claude-code':
-      default:
-        return join(homedir(), '.mcp.json');
-    }
-  })();
-  return homeRelative(abs);
+  return homeRelative(absoluteMcpPath(platform));
 }
 
-function settingsPath()  { return homeRelative(join(homedir(), '.claude', 'settings.json')); }
-function skillPath(name) { return homeRelative(join(homedir(), '.claude', 'skills', name, 'SKILL.md')); }
-function statePath()     { return homeRelative(join(homedir(), '.tokens-for-good', 'state.json')); }
+function settingsPath()         { return homeRelative(join(homedir(), '.claude', 'settings.json')); }
+function skillPath(name)        { return homeRelative(join(homedir(), '.claude', 'skills', name, 'SKILL.md')); }
+function qwenCommandPath(name)  { return homeRelative(join(homedir(), '.qwen', 'commands', `${name}.md`)); }
+function statePath()            { return homeRelative(join(homedir(), '.tokens-for-good', 'state.json')); }
 
 // --- File writers ---
 
@@ -219,6 +212,8 @@ function absoluteMcpPath(platform) {
       return join(process.cwd(), '.cursor', 'mcp.json');
     case 'windsurf':
       return join(homedir(), '.codeium', 'windsurf', 'mcp_config.json');
+    case 'qwen-code':
+      return join(homedir(), '.qwen', 'settings.json');
     case 'devin':
     case 'claude-code':
     default:
@@ -284,6 +279,16 @@ function writeSkillFile(name) {
   writeFileSync(dst, readFileSync(src, 'utf-8'), 'utf-8');
 }
 
+// Qwen Code uses Gemini CLI's custom-command format: one .md per command at
+// ~/.qwen/commands/<name>.md. YAML frontmatter is supported; the body is the
+// command prompt. Our existing skill body works as-is.
+function writeQwenCommand(name) {
+  const src = join(PKG_ROOT, 'skills', `${name}.md`);
+  const dst = join(homedir(), '.qwen', 'commands', `${name}.md`);
+  ensureDir(dst);
+  writeFileSync(dst, readFileSync(src, 'utf-8'), 'utf-8');
+}
+
 // --- Closing guidance ---
 
 function printClosingGuidance(platform, flow, freq) {
@@ -300,11 +305,23 @@ function printClosingGuidance(platform, flow, freq) {
     if (flow === 'scheduled') {
       console.log(`MCP config written to ${mcpConfigPath('opencode')}.\n`);
       console.log('To run on a schedule, add this to your crontab (crontab -e):');
-      const cron = freq === 'hourly' ? '0 * * * *' : freq === 'weekly' ? '0 2 * * 1' : '0 2 * * *';
-      console.log(`  ${cron} cd /path/to/workspace && opencode run "Research a nonprofit org for Fierce Philanthropy using the tokens-for-good MCP tools."\n`);
+      console.log(`  ${cronExpression(freq)} cd /path/to/workspace && opencode run "Research a nonprofit org for Fierce Philanthropy using the tokens-for-good MCP tools."\n`);
     } else {
       console.log('MCP config written. In OpenCode run: "Research a nonprofit org for Fierce Philanthropy."\n');
     }
+    return;
+  }
+  if (platform === 'qwen-code') {
+    console.log(`MCP config written to ${mcpConfigPath('qwen-code')}.`);
+    console.log(`Slash command written to ${qwenCommandPath('tfg')}.`);
+    console.log('Restart Qwen Code, then run `/tfg` to research one org.');
+    if (flow === 'scheduled') {
+      console.log('\nFor recurring runs, either:');
+      console.log('  • Enable Qwen Code\'s experimental cron (set QWEN_CODE_ENABLE_CRON=1 and use the Cron tool / /loop), or');
+      console.log('  • Add a system cron line (crontab -e):');
+      console.log(`      ${cronExpression(freq)} cd /path/to/workspace && qwen --prompt "Run /tfg"`);
+    }
+    console.log('');
     return;
   }
   // cursor, windsurf, devin
@@ -314,4 +331,10 @@ function printClosingGuidance(platform, flow, freq) {
     console.log(`Scheduling on ${platform} requires platform-native setup; see setup_automation tool for details.`);
   }
   console.log('');
+}
+
+function cronExpression(freq) {
+  if (freq === 'hourly') return '0 * * * *';
+  if (freq === 'weekly') return '0 2 * * 1';
+  return '0 2 * * *';
 }
