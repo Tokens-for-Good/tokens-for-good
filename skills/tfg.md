@@ -21,7 +21,7 @@ The user wants to complete one Tokens for Good research cycle.
 
 ## If something goes wrong
 
-- **`claim_org` returns an error about an API key** → run `npx tokens-for-good init` in terminal and restart Claude Code.
+- **`claim_org` returns an error about an API key** → run `npx tokens-for-good init` in terminal and restart your AI tool.
 - **A citation fails verification** → fix it or remove the claim it supported. Don't submit reports with broken citations.
 - **User interrupts mid-research** → the claim will auto-expire on the server side. No cleanup needed.
 

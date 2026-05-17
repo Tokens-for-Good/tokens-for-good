@@ -17,7 +17,7 @@ const STATE_FILE = join(homedir(), '.tokens-for-good', 'state.json');
 
 const INIT_GUARD_MESSAGE = `Tokens for Good setup isn't complete on this machine yet.
 
-Tell the user to run this in their terminal (not in Claude), then restart Claude Code:
+Tell the user to run this in their terminal (not here in the chat), then restart their AI tool:
 
   npx tokens-for-good init
 
@@ -50,7 +50,7 @@ const server = new McpServer({
 
 // --- No-key onboarding message ---
 
-const NO_KEY_INSTRUCTIONS = `The user wants to set up Tokens for Good. Tell them to run this in their terminal (not here in Claude), then restart Claude Code:
+const NO_KEY_INSTRUCTIONS = `The user wants to set up Tokens for Good. Tell them to run this in their terminal (not here in the chat), then restart their AI tool:
 
   npx tokens-for-good init
 
@@ -60,7 +60,7 @@ The command walks them through everything in under a minute:
 3. Pick a cadence: **daily** (recommended), weekly, hourly, or one-off
 4. Confirm
 
-init writes everything — MCP config, SessionStart hook, /tfg and /tfg-schedule skills, and their recorded preference — in one shot. The first Claude Code session after init runs their chosen flow automatically.
+init writes everything — MCP config, SessionStart hook, /tfg and /tfg-schedule skills, and their recorded preference — in one shot. The first session after init runs their chosen flow automatically.
 
 **What is Tokens for Good?** A way for developers to donate their spare AI subscription tokens to research nonprofit organizations for Fierce Philanthropy's social impact directory. Each org takes ~5 minutes and ~$0.20 in tokens. Contributors get credit on a public leaderboard.`;
 

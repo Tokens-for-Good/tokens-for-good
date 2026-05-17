@@ -1,4 +1,4 @@
-# Step 3: Humanize — Claude Code Instructions
+# Step 3: Humanize — Instructions
 
 ## Inputs
 

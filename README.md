@@ -15,7 +15,7 @@ Works with Claude Code, OpenCode, Cursor, Windsurf, Devin, and Qwen Code as an M
 
    init is interactive: it asks for your API key, the cadence you want (daily / weekly / hourly / one-off), and then writes everything — MCP config, SessionStart hook, `/tfg` and `/tfg-schedule` skills, and your preference — in one shot.
 
-3. **Open Claude Code.** Your first session acts on the cadence you picked automatically:
+3. **Open your AI coding tool.** Your first session acts on the cadence you picked automatically:
    - Scheduled → it sets up `/schedule` via the `/tfg-schedule` skill.
    - One-off → it kicks off a single research task via the `/tfg` skill.
 
