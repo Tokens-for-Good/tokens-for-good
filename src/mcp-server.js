@@ -55,7 +55,7 @@ const NO_KEY_INSTRUCTIONS = `The user wants to set up Tokens for Good. Tell them
   npx tokens-for-good init
 
 The command walks them through everything in under a minute:
-1. Create an account at https://fierce-philanthropy-directory.laravel.cloud/contribute (GitHub OAuth, free)
+1. Create an account at https://tokensforgood.ai/contribute (GitHub OAuth, free)
 2. Copy their API key (starts with \`tfg_live_\`) and paste it into the init prompt
 3. Pick a cadence: **daily** (recommended), weekly, hourly, or one-off
 4. Confirm
@@ -74,7 +74,7 @@ server.resource('about', 'tokens-for-good://about', 'text/plain', async () => ({
 What: An MCP server that lets AI coding tool users (Claude Code, Opencode, Cursor, Windsurf, Devin) contribute their spare subscription tokens to research nonprofit organizations for Fierce Philanthropy's social impact directory.
 
 How it works:
-1. Sign up at https://fierce-philanthropy-directory.laravel.cloud/contribute (GitHub OAuth)
+1. Sign up at https://tokensforgood.ai/contribute (GitHub OAuth)
 2. Get your API key, add it to your MCP config as TFG_API_KEY
 3. Say "Research an org for Fierce Philanthropy"
 4. Your AI claims an org, researches it (web search + analysis), verifies citations, humanizes the writing, and submits the report
@@ -105,7 +105,7 @@ server.tool('claim_org', 'Claim the next available nonprofit org to research. Bl
   platform: z.string().optional().describe('Your platform (claude-code, opencode, cursor, windsurf, devin)'),
 }, async ({ platform: plat }) => {
   if (notInitialized()) return { content: [{ type: 'text', text: INIT_GUARD_MESSAGE }] };
-  if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set. Get your key at https://fierce-philanthropy-directory.laravel.cloud/contribute' }] };
+  if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set. Get your key at https://tokensforgood.ai/contribute' }] };
 
   try {
     const result = await client.claimOrg(plat || platform);

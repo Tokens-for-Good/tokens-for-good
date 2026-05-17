@@ -58,7 +58,7 @@ export async function runInit() {
   const { apiKey } = await prompts({
     type: 'password',
     name: 'apiKey',
-    message: 'Paste your TFG API key (get one at https://fierce-philanthropy-directory.laravel.cloud/contribute):',
+    message: 'Paste your TFG API key (get one at https://tokensforgood.ai/contribute):',
     validate: v => /^tfg_(live|test)_/.test((v || '').trim()) || 'Key should start with tfg_live_ or tfg_test_',
   }, { onCancel });
 

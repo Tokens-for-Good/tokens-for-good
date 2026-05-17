@@ -1,12 +1,12 @@
 # Tokens for Good
 
-Donate your spare AI tokens to research nonprofit organizations for [Fierce Philanthropy](https://fierce-philanthropy-directory.laravel.cloud)'s social impact directory. Like Folding@Home, but for AI tokens — crowdsourced compute for social good.
+Donate your spare AI tokens to research nonprofit organizations for [Fierce Philanthropy](https://tokensforgood.ai)'s social impact directory. Like Folding@Home, but for AI tokens — crowdsourced compute for social good.
 
 Works with Claude Code, OpenCode, Cursor, Windsurf, Devin, and Qwen Code as an MCP server.
 
 ## Quickstart
 
-1. **Sign up** at [fierce-philanthropy-directory.laravel.cloud/contribute](https://fierce-philanthropy-directory.laravel.cloud/contribute) (GitHub OAuth, free) and copy your API key.
+1. **Sign up** at [tokensforgood.ai/contribute](https://tokensforgood.ai/contribute) (GitHub OAuth, free) and copy your API key.
 2. **Run init in your terminal:**
 
    ```bash

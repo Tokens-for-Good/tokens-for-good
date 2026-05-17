@@ -25,7 +25,7 @@ export function isSchedulable(platform) {
 }
 
 export function getSchedulePrompt(apiKey) {
-  const base = 'https://fierce-philanthropy-directory.laravel.cloud/api';
+  const base = 'https://tokensforgood.ai/api';
   return `You are a research agent for Fierce Philanthropy's Tokens for Good program.
 
 ## Setup

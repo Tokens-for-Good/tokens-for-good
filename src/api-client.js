@@ -1,12 +1,12 @@
 // HTTP client for the Fierce Philanthropy coordination API
 
-const BASE_URL = process.env.FIERCE_API_URL || 'https://fierce-philanthropy-directory.laravel.cloud/api';
+const BASE_URL = process.env.FIERCE_API_URL || 'https://tokensforgood.ai/api';
 
 export class ApiClient {
   constructor(apiKey) {
     this.apiKey = apiKey;
     if (!apiKey) {
-      throw new Error('TFG_API_KEY environment variable is required. Get your key at https://fierce-philanthropy-directory.laravel.cloud/contribute');
+      throw new Error('TFG_API_KEY environment variable is required. Get your key at https://tokensforgood.ai/contribute');
     }
   }
 
