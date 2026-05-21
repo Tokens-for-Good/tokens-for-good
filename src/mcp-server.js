@@ -21,7 +21,7 @@ Tell the user to run this in their terminal (not here in the chat), then restart
 
   npx tokens-for-good init
 
-The init command asks them to choose a contribution cadence (hourly / daily / weekly / one-off) and wires up everything else automatically. It takes about 30 seconds.`;
+The init command asks them to choose a contribution cadence (daily / weekly / one-off) and wires up everything else automatically. It takes about 30 seconds.`;
 
 // Gate: only fires for genuinely cold installs where state.json is missing
 // entirely. Existing users — including those on the pre-0.4.0 schema — pass
@@ -57,12 +57,12 @@ const NO_KEY_INSTRUCTIONS = `The user wants to set up Tokens for Good. Tell them
 The command walks them through everything in under a minute:
 1. Create an account at https://tokensforgood.ai/contribute (GitHub OAuth, free)
 2. Copy their API key (starts with \`tfg_live_\`) and paste it into the init prompt
-3. Pick a cadence: **daily** (recommended), weekly, hourly, or one-off
+3. Pick a cadence: **daily** (recommended; choose how many runs per day), weekly, or one-off
 4. Confirm
 
 init writes everything — MCP config, SessionStart hook, /tfg and /tfg-schedule skills, and their recorded preference — in one shot. The first session after init runs their chosen flow automatically.
 
-**What is Tokens for Good?** A way for developers to donate their spare AI subscription tokens to research nonprofit organizations for Fierce Philanthropy's social impact directory. Each org takes ~5 minutes and ~$0.20 in tokens. Contributors get credit on a public leaderboard.`;
+**What is Tokens for Good?** A way for developers to donate their spare AI subscription tokens to research nonprofit organizations for Fierce Philanthropy's social impact directory. Each org takes about 5 minutes. Contributors get credit on a public leaderboard.`;
 
 // --- Resources ---
 
@@ -95,7 +95,7 @@ Contributor tiers:
 
 Automation: On Claude Code, use /schedule to auto-contribute daily. On Opencode, set up a system cron. On Cursor/Windsurf, contribute manually when prompted.
 
-Cost: ~$0.15-0.25 per org in tokens. Scale: 750K+ US nonprofits to research.`,
+Scale: 750K+ US nonprofits to research.`,
   }],
 }));
 
@@ -245,10 +245,9 @@ server.tool('my_impact', 'See your personal contribution stats, tier, and histor
   try {
     const result = await client.getImpact();
     const c = result.contributor;
-    const estimatedCost = (c.total_tokens / 1_000_000 * 3).toFixed(2);
 
     return {
-      content: [{ type: 'text', text: `Your Impact (@${c.github_handle}):\n\nTier: ${c.tier}\nOrgs researched: ${c.total_orgs}\nEstimated donation: ~$${estimatedCost}\nAcceptance rate: ${c.acceptance_rate}%\nAutomation: ${c.has_schedule ? 'Active' : 'Not set up'}\n\nRecent:\n${result.claims?.slice(0, 5).map(cl => `  ${cl.organization?.name || 'Unknown'} - ${cl.status}`).join('\n') || 'None'}` }],
+      content: [{ type: 'text', text: `Your Impact (@${c.github_handle}):\n\nTier: ${c.tier}\nOrgs researched: ${c.total_orgs}\nAcceptance rate: ${c.acceptance_rate}%\nAutomation: ${c.has_schedule ? 'Active' : 'Not set up'}\n\nRecent:\n${result.claims?.slice(0, 5).map(cl => `  ${cl.organization?.name || 'Unknown'} - ${cl.status}`).join('\n') || 'None'}` }],
     };
   } catch (err) {
     return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
@@ -260,10 +259,11 @@ server.tool('setup_guide', 'Get setup instructions for Tokens for Good. Use this
 });
 
 server.tool('setup_automation', 'Get the scheduled-research prompt + setup instructions for the user\'s platform. Usually called by the /tfg-schedule skill (which extracts the prompt and invokes /schedule). Safe to call directly too — returns human-readable instructions.', {
-  frequency: z.enum(['hourly', 'daily', 'weekly']).optional().describe('How often to contribute'),
-}, async ({ frequency }) => {
+  frequency: z.enum(['daily', 'weekly']).optional().describe('How often to contribute'),
+  runs_per_day: z.number().int().min(1).max(15).optional().describe('For daily cadence: how many research runs per day (1-15). Defaults to 1.'),
+}, async ({ frequency, runs_per_day }) => {
   if (notInitialized()) return { content: [{ type: 'text', text: INIT_GUARD_MESSAGE }] };
-  const instructions = getAutomationInstructions(platform, frequency || 'daily', apiKey);
+  const instructions = getAutomationInstructions(platform, frequency || 'daily', apiKey, runs_per_day || 1);
   return { content: [{ type: 'text', text: instructions }] };
 });
 
@@ -342,7 +342,7 @@ server.prompt('session_start', 'Check if you should research an org or complete 
     return {
       messages: [{
         role: 'user',
-        content: { type: 'text', text: `Tokens for Good: Would you like to research a nonprofit org today? It takes about 5 minutes and costs ~$0.20 in tokens.\n\n1. Research an org now\n2. Ask me tomorrow\n3. Ask me in a week\n\nUse claim_org for option 1.` },
+        content: { type: 'text', text: `Tokens for Good: Would you like to research a nonprofit org today? It takes about 5 minutes.\n\n1. Research an org now\n2. Ask me tomorrow\n3. Ask me in a week\n\nUse claim_org for option 1.` },
       }],
     };
   }

@@ -13,7 +13,8 @@ const DEFAULT_STATE = {
   platform: null,
   total_session_contributions: 0,
   intended_flow: null,          // 'scheduled' | 'one_off' | null (pre-init)
-  intended_frequency: null,     // 'hourly' | 'daily' | 'weekly' | null
+  intended_frequency: null,     // 'daily' | 'weekly' | null
+  runs_per_day: null,           // 1-15 when intended_frequency === 'daily', else null
   first_setup_complete: false,  // flipped by mark_setup_complete tool after first scheduled run or first one-off submit
   installed_at: null,           // ISO timestamp when init finished
 };

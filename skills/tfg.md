@@ -1,6 +1,6 @@
 ---
 name: tfg
-description: Do one Tokens for Good research task end-to-end — claim an org, research it using the provided methodology, and submit the report. Use when the user wants to contribute once (not set up automation). Takes ~5 minutes and ~$0.20 in tokens per org.
+description: Do one Tokens for Good research task end-to-end — claim an org, research it using the provided methodology, and submit the report. Use when the user wants to contribute once (not set up automation). Takes about 5 minutes per org.
 ---
 
 The user wants to complete one Tokens for Good research cycle.

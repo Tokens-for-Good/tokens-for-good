@@ -40,19 +40,25 @@ Auth header for all requests: X-TFG-Api-Key: ${apiKey}
 All endpoints, scoring criteria, and submission format are in the fetched instructions.`;
 }
 
-export function getAutomationInstructions(platform, frequency = 'daily', apiKey = null) {
+// Claude Code caps how many scheduled runs a routine gets per day, so daily
+// research fires a chosen number of times (1-15).
+export const MAX_RUNS_PER_DAY = 15;
+
+export function getAutomationInstructions(platform, frequency = 'daily', apiKey = null, runsPerDay = 1) {
+  const cron = cronForSchedule(frequency, runsPerDay);
+  const label = scheduleLabel(frequency, runsPerDay);
   switch (platform) {
     case 'claude-code':
       return `Set up automated contributions with Claude Code's /schedule command.
 
-(The /tfg-schedule skill does these 3 steps automatically. If you're reading this because Claude is orchestrating /tfg-schedule, extract the prompt between the --- markers and invoke /schedule with frequency="${frequency}" and that prompt.)
+(The /tfg-schedule skill does these 3 steps automatically. If you're reading this because Claude is orchestrating /tfg-schedule, extract the prompt between the --- markers and invoke /schedule on the schedule below with that prompt.)
 
 **Step 1:** Run this in Claude Code:
 \`\`\`
 /schedule
 \`\`\`
 
-**Step 2:** Set frequency to "${frequency}"
+**Step 2:** Set the schedule to ${label} (cron: \`${cron}\`)
 
 **Step 3:** When prompted for the task description, paste the prompt between the --- markers below:
 
@@ -66,13 +72,13 @@ This runs on Anthropic's cloud infrastructure. Your machine doesn't need to be o
       return `Set up automated contributions with a system cron job:
 
 Add this to your crontab (crontab -e):
-${getCronExpression(frequency)} cd /path/to/workspace && opencode run "Research a nonprofit org for Fierce Philanthropy using the tokens-for-good MCP tools. Claim an org, research it, then submit the report."
+${cron} cd /path/to/workspace && opencode run "Research a nonprofit org for Fierce Philanthropy using the tokens-for-good MCP tools. Claim an org, research it, then submit the report."
 
 Your machine must be on for cron jobs to run.`;
 
     case 'devin':
       return `Set up a recurring Devin session to contribute automatically.
-Configure a ${frequency} recurring session with the prompt:
+Configure a ${label} recurring session with the prompt:
 "Research a nonprofit org for Fierce Philanthropy using the tokens-for-good MCP tools."
 
 Devin runs in the cloud, fully autonomous.`;
@@ -83,20 +89,31 @@ Devin runs in the cloud, fully autonomous.`;
 Qwen Code v0.14+ has experimental built-in cron — enable it with QWEN_CODE_ENABLE_CRON=1 (or "experimental.cron": true in ~/.qwen/settings.json) and then use the Cron tool / /loop skill.
 
 For a portable option, use a system cron job (add via crontab -e):
-${getCronExpression(frequency)} cd /path/to/workspace && qwen --prompt "Research a nonprofit org for Fierce Philanthropy using the tokens-for-good MCP tools. Claim an org, research it, then submit the report."
+${cron} cd /path/to/workspace && qwen --prompt "Research a nonprofit org for Fierce Philanthropy using the tokens-for-good MCP tools. Claim an org, research it, then submit the report."
 
 Your machine must stay on for system cron to run.`;
 
     default:
-      return getAutomationInstructions('claude-code', frequency, apiKey);
+      return getAutomationInstructions('claude-code', frequency, apiKey, runsPerDay);
   }
 }
 
-function getCronExpression(frequency) {
-  switch (frequency) {
-    case 'hourly': return '0 * * * *';
-    case 'daily': return '0 2 * * *';
-    case 'weekly': return '0 2 * * 1';
-    default: return '0 2 * * *';
-  }
+// Build a cron expression. Weekly fires Monday 02:00. Daily fires `runsPerDay`
+// times (1-15), evenly spaced across the day; once-daily fires at 02:00.
+export function cronForSchedule(frequency, runsPerDay = 1) {
+  if (frequency === 'weekly') return '0 2 * * 1';
+  const n = clampRunsPerDay(runsPerDay);
+  if (n === 1) return '0 2 * * *';
+  const hours = Array.from({ length: n }, (_, i) => Math.round((i * 24) / n));
+  return `0 ${hours.join(',')} * * *`;
+}
+
+function scheduleLabel(frequency, runsPerDay = 1) {
+  if (frequency === 'weekly') return 'weekly (Mondays)';
+  const n = clampRunsPerDay(runsPerDay);
+  return n === 1 ? 'daily' : `${n}× per day`;
+}
+
+function clampRunsPerDay(runsPerDay) {
+  return Math.min(MAX_RUNS_PER_DAY, Math.max(1, Math.floor(Number(runsPerDay)) || 1));
 }

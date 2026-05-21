@@ -13,7 +13,7 @@ Works with Claude Code, OpenCode, Cursor, Windsurf, Devin, and Qwen Code as an M
    npx tokens-for-good init
    ```
 
-   init is interactive: it asks for your API key, the cadence you want (daily / weekly / hourly / one-off), and then writes everything — MCP config, SessionStart hook, `/tfg` and `/tfg-schedule` skills, and your preference — in one shot.
+   init is interactive: it asks for your API key, the cadence you want (daily, with a chosen number of runs per day / weekly / one-off), and then writes everything — MCP config, SessionStart hook, `/tfg` and `/tfg-schedule` skills, and your preference — in one shot.
 
 3. **Open your AI coding tool.** Your first session acts on the cadence you picked automatically:
    - Scheduled → it sets up `/schedule` via the `/tfg-schedule` skill.
@@ -23,7 +23,7 @@ To change cadence later, run `npx tokens-for-good init` again.
 
 ## What happens during research
 
-Each org takes ~5 minutes and ~$0.20 in tokens:
+Each org takes about 5 minutes:
 
 1. **Research** — web search + 6-prompt methodology, scored checklist (100 pts)
 2. **Verify** — every citation URL checked, hallucinations flagged and corrected

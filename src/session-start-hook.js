@@ -55,12 +55,16 @@ function firstSessionMessage(state) {
     : 'recently';
 
   if (state.intended_flow === 'scheduled') {
-    const freq = state.intended_frequency || 'daily';
+    // Normalize to the supported cadences (older installs may hold other values).
+    const freq = state.intended_frequency === 'weekly' ? 'weekly' : 'daily';
+    const runs = freq === 'daily' ? (state.runs_per_day || 1) : null;
+    const runsClause = runs ? ` and runs_per_day=${runs}` : '';
+    const cadence = runs && runs > 1 ? `${freq}, ${runs}× per day` : freq;
     return (
       `Tokens for Good: The user ran \`npx tokens-for-good init\` on ${installedOn} ` +
-      `and chose scheduled research at ${freq} cadence. This is their first Claude Code ` +
+      `and chose scheduled research (${cadence}). This is their first Claude Code ` +
       `session since. Before any other task, invoke the /tfg-schedule skill with ` +
-      `frequency=${freq}. After /schedule confirms, the skill will call ` +
+      `frequency=${freq}${runsClause}. After /schedule confirms, the skill will call ` +
       `mark_setup_complete on the TFG MCP to dismiss this prompt.`
     );
   }

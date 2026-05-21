@@ -67,7 +67,7 @@ tokens-for-good/
 
 The mental model most contributors need:
 
-1. **User runs `npx tokens-for-good init`** in a terminal. init asks for an API key + cadence (daily / weekly / hourly / one-off), then writes up to five things in one shot:
+1. **User runs `npx tokens-for-good init`** in a terminal. init asks for an API key + cadence (daily, with a chosen number of runs per day / weekly / one-off), then writes up to five things in one shot:
    - MCP config in the harness-appropriate location
    - A SessionStart hook entry (Claude Code only for now)
    - The `/tfg` and `/tfg-schedule` skill files (Claude Code only for now)

@@ -8,7 +8,7 @@ import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { fileURLToPath } from 'url';
 import { spawnSync } from 'child_process';
-import { detectPlatform } from './platform.js';
+import { detectPlatform, cronForSchedule, MAX_RUNS_PER_DAY } from './platform.js';
 import { loadState, saveState } from './state.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -16,9 +16,8 @@ const PKG_ROOT = join(__dirname, '..');
 const IS_WINDOWS = process.platform === 'win32';
 
 const FREQUENCY_CHOICES = [
-  { title: 'Daily  — recommended, sustainable cadence',                    value: 'daily'   },
+  { title: 'Daily  — recommended; pick how many runs per day next',        value: 'daily'   },
   { title: 'Weekly — light touch',                                         value: 'weekly'  },
-  { title: 'Hourly — aggressive (many orgs per day)',                      value: 'hourly'  },
   { title: "One-off — I'll run research manually when I feel like it",     value: 'one_off' },
 ];
 
@@ -45,7 +44,7 @@ export async function runInit() {
     const { redo } = await prompts({
       type: 'confirm',
       name: 'redo',
-      message: `Already set up (${existing.intended_flow}${existing.intended_frequency ? `, ${existing.intended_frequency}` : ''}). Reconfigure?`,
+      message: `Already set up (${existing.intended_flow}${existing.intended_frequency ? `, ${existing.intended_frequency}${existing.intended_frequency === 'daily' && existing.runs_per_day > 1 ? ` ${existing.runs_per_day}×/day` : ''}` : ''}). Reconfigure?`,
       initial: false,
     }, { onCancel });
     if (!redo) {
@@ -81,6 +80,21 @@ export async function runInit() {
     choices: FREQUENCY_CHOICES,
     initial: 0,
   }, { onCancel });
+
+  // Step 3b: Daily cadence — how many runs per day. Claude Code caps the
+  // number of scheduled runs per day, so we ask for a count (1-15).
+  let runs_per_day = null;
+  if (choice === 'daily') {
+    const { count } = await prompts({
+      type: 'number',
+      name: 'count',
+      message: `How many times per day? (1-${MAX_RUNS_PER_DAY})`,
+      initial: 1,
+      min: 1,
+      max: MAX_RUNS_PER_DAY,
+    }, { onCancel });
+    runs_per_day = count || 1;
+  }
 
   const intended_flow = choice === 'one_off' ? 'one_off' : 'scheduled';
   const intended_frequency = choice === 'one_off' ? null : choice;
@@ -120,6 +134,7 @@ export async function runInit() {
     ...loadState(),
     intended_flow,
     intended_frequency,
+    runs_per_day,
     first_setup_complete: false,
     platform,
     installed_at: new Date().toISOString(),
@@ -130,7 +145,7 @@ export async function runInit() {
 
   // Closing message
   console.log('\n✓ Setup complete.\n');
-  printClosingGuidance(platform, intended_flow, intended_frequency);
+  printClosingGuidance(platform, intended_flow, intended_frequency, runs_per_day);
 }
 
 // --- Planning (for preview + execute) ---
@@ -300,10 +315,11 @@ function writeQwenCommand(name) {
 
 // --- Closing guidance ---
 
-function printClosingGuidance(platform, flow, freq) {
+function printClosingGuidance(platform, flow, freq, runsPerDay = 1) {
+  const cadence = freq === 'daily' && runsPerDay > 1 ? `daily (${runsPerDay}× per day)` : freq;
   if (platform === 'claude-code') {
     if (flow === 'scheduled') {
-      console.log(`Open Claude Code — your first session will set up /schedule at ${freq} cadence automatically.`);
+      console.log(`Open Claude Code — your first session will set up /schedule at ${cadence} cadence automatically.`);
     } else {
       console.log('Open Claude Code — your first session will kick off a one-off research task.');
     }
@@ -314,7 +330,7 @@ function printClosingGuidance(platform, flow, freq) {
     if (flow === 'scheduled') {
       console.log(`MCP config written to ${mcpConfigPath('opencode')}.\n`);
       console.log('To run on a schedule, add this to your crontab (crontab -e):');
-      console.log(`  ${cronExpression(freq)} cd /path/to/workspace && opencode run "Research a nonprofit org for Fierce Philanthropy using the tokens-for-good MCP tools."\n`);
+      console.log(`  ${cronForSchedule(freq, runsPerDay)} cd /path/to/workspace && opencode run "Research a nonprofit org for Fierce Philanthropy using the tokens-for-good MCP tools."\n`);
     } else {
       console.log('MCP config written. In OpenCode run: "Research a nonprofit org for Fierce Philanthropy."\n');
     }
@@ -328,7 +344,7 @@ function printClosingGuidance(platform, flow, freq) {
       console.log('\nFor recurring runs, either:');
       console.log('  • Enable Qwen Code\'s experimental cron (set QWEN_CODE_ENABLE_CRON=1 and use the Cron tool / /loop), or');
       console.log('  • Add a system cron line (crontab -e):');
-      console.log(`      ${cronExpression(freq)} cd /path/to/workspace && qwen --prompt "Run /tfg"`);
+      console.log(`      ${cronForSchedule(freq, runsPerDay)} cd /path/to/workspace && qwen --prompt "Run /tfg"`);
     }
     console.log('');
     return;
@@ -340,10 +356,4 @@ function printClosingGuidance(platform, flow, freq) {
     console.log(`Scheduling on ${platform} requires platform-native setup; see setup_automation tool for details.`);
   }
   console.log('');
-}
-
-function cronExpression(freq) {
-  if (freq === 'hourly') return '0 * * * *';
-  if (freq === 'weekly') return '0 2 * * 1';
-  return '0 2 * * *';
 }

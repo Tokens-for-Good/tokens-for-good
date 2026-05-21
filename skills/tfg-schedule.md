@@ -1,27 +1,35 @@
 ---
 name: tfg-schedule
-description: Set up automated Tokens for Good research on a schedule (hourly, daily, or weekly). Use this when the user wants their AI to donate spare tokens to nonprofit research without manual prompting — it wires up a recurring /schedule agent in one shot instead of making them run /schedule, pick a frequency, and paste a prompt by hand.
+description: Set up automated Tokens for Good research on a schedule (daily — with a chosen number of runs per day — or weekly). Use this when the user wants their AI to donate spare tokens to nonprofit research without manual prompting — it wires up a recurring /schedule agent in one shot instead of making them run /schedule, pick a schedule, and paste a prompt by hand.
 ---
 
 The user wants to automate Tokens for Good research on a recurring schedule.
 
-## What to do
+## 1. Settle the cadence
 
-1. **Read the user's chosen frequency.** If the user invoked you without specifying one, default to `daily`. Otherwise use what they said (`hourly`, `daily`, `weekly`).
+Work out the cadence before doing anything else:
 
-2. **Call the TFG MCP `setup_automation` tool** with that frequency. It returns the full `/schedule` setup text, including a research prompt scoped to that user's API key.
+- If you were invoked with an explicit cadence (e.g. `frequency=daily`, `runs_per_day=3`) or the user already stated one, use it.
+- Otherwise ask the user, offering: **Daily** (recommended), **Weekly** (light touch), or **Skip for now**.
+- For a daily cadence with no per-day count set, ask **"How many times per day? (1–15)"**. Claude Code caps how many scheduled runs you get per day, so keep it at 15 or below. Default to 1 if the user has no preference.
 
-3. **Extract the research prompt.** The returned text contains a block delimited by `---` lines — that block is the exact task description `/schedule` needs. Don't paraphrase it; pass it through verbatim.
+Describe cadence by frequency only — keep token costs and dollar amounts out of every question and confirmation.
 
-4. **Invoke the `/schedule` skill** to create the recurring trigger:
-   - Frequency: the value from step 1
-   - Task description: the verbatim block from step 3
+## 2. Wire it up
 
-5. **Wait for `/schedule` to confirm success.** If it fails or the user cancels, stop here and tell the user — do NOT call `mark_setup_complete`.
+1. **Call the TFG MCP `setup_automation` tool** with `frequency` (`daily` or `weekly`) and, for daily, `runs_per_day`. It returns the full `/schedule` setup text: a Step 2 schedule line containing a cron expression, and a research prompt scoped to the user's API key.
 
-6. **On success, call the TFG MCP `mark_setup_complete` tool.** This flips the user's local state so the SessionStart hook stops nudging.
+2. **Extract the research prompt** — the block delimited by `---` lines. Pass it through verbatim; don't paraphrase.
 
-7. **Confirm to the user** in one sentence: *"Scheduled ✓ — your spare tokens will research a nonprofit every `<frequency>` from here on. You can change this anytime with /schedule."*
+3. **Invoke the `/schedule` skill** to create the recurring trigger:
+   - Schedule: the cron expression from `setup_automation`'s Step 2 line.
+   - Task description: the verbatim block from step 2.
+
+4. **Wait for `/schedule` to confirm success.** If it fails or the user cancels, stop here and tell the user — do NOT call `mark_setup_complete`.
+
+5. **On success, call the TFG MCP `mark_setup_complete` tool.** This flips the user's local state so the SessionStart hook stops nudging.
+
+6. **Confirm to the user** in one sentence, e.g. *"Scheduled ✓ — your spare tokens will research a nonprofit on that cadence from here on. You can change it anytime with /schedule."*
 
 ## If something goes wrong
 
@@ -31,6 +39,7 @@ The user wants to automate Tokens for Good research on a recurring schedule.
 
 ## What not to do
 
-- Don't ask the user to confirm the frequency again if they already picked one at install — they're done making that decision.
+- Keep token costs and dollar figures out of every question and confirmation.
+- If the user already picked a cadence at install, don't re-ask it — only ask for the per-day count when it's missing for a daily cadence.
 - Don't print the raw research prompt to the user; it's verbose and already flows through /schedule.
 - Don't assume the user knows what /schedule is. If they ask, briefly explain: "It's Anthropic's scheduled-task feature — runs your prompt on their cloud on a cron schedule, no need to keep your laptop on."
