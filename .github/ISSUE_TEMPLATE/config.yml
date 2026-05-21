@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Account, API key, or dashboard help
+    url: https://tokensforgood.ai/contributor/dashboard
+    about: Manage your account, regenerate your API key, and see your impact. Not a code problem? Start here.
+  - name: Porting to a new agent? Read CONTRIBUTING first
+    url: https://github.com/Tokens-for-Good/tokens-for-good/blob/master/CONTRIBUTING.md#touch-points-when-porting-to-a-new-harness
+    about: The exact touch points a harness port needs to hit. File a compatibility report before investing a day in code.

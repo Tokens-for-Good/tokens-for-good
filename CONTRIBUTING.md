@@ -197,8 +197,11 @@ The `files` field in `package.json` controls what ships. Keep it tight — node_
 
 ## Filing issues
 
-- **Bugs**: [GitHub issues](https://github.com/Tokens-for-Good/tokens-for-good/issues) with a repro. "It didn't nudge me" → include your OS, harness, harness version, and the output of `npx tokens-for-good session-start-hook` run manually.
-- **Harness ports**: file an issue first so we can sanity-check the plan before you invest a day on code. Happy to talk through the touch points.
+Use the [issue templates](https://github.com/Tokens-for-Good/tokens-for-good/issues/new/choose) — there's a form for bug reports and one for **agent/harness compatibility reports**. They prompt for the details we always end up asking for anyway.
+
+- **Bugs**: the bug form asks for a repro. "It didn't nudge me" → include your OS, harness, harness version, and the output of `npx tokens-for-good session-start-hook` run manually.
+- **Harness compatibility**: tried TFG on OpenCode, Cursor, Codex, or anything that isn't Claude Code? File a compatibility report so we can mark the tool supported. Even a "didn't work" is useful.
+- **Harness ports** (writing the adapter code): file a compatibility issue first so we can sanity-check the plan before you invest a day on code. Happy to talk through the touch points.
 - **Feature ideas**: same — issue first.
 
 ## A note on scope

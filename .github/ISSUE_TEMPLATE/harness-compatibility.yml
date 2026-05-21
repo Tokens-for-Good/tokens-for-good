@@ -1,0 +1,68 @@
+name: Agent / harness compatibility report
+description: Tried Tokens for Good on a coding agent other than Claude Code? Tell us what happened.
+title: "[compat] <agent>: worked / partly / didn't"
+labels: ["harness-compatibility"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing Tokens for Good on another agent. Reports like this are how we mark a tool as supported, so even "it didn't work" is genuinely useful.
+  - type: dropdown
+    id: harness
+    attributes:
+      label: Which agent / harness did you try?
+      options:
+        - OpenCode
+        - Cursor
+        - Windsurf
+        - Devin
+        - Qwen Code
+        - OpenAI Codex CLI
+        - Gemini CLI
+        - Aider
+        - Other (name it in "what broke")
+    validations:
+      required: true
+  - type: input
+    id: harness-version
+    attributes:
+      label: Agent version
+      placeholder: e.g. opencode 0.x.y
+  - type: input
+    id: model
+    attributes:
+      label: Model used
+      placeholder: e.g. Claude Sonnet 4.6, self-hosted Qwen 3.5-27B, GPT-...
+  - type: dropdown
+    id: result
+    attributes:
+      label: Overall result
+      options:
+        - Worked end-to-end (init, session handoff, research submitted)
+        - Partly worked (some steps failed)
+        - Did not work
+    validations:
+      required: true
+  - type: textarea
+    id: worked
+    attributes:
+      label: What worked
+      placeholder: Which steps succeeded? (init, MCP connection, /tfg, scheduling, submit)
+  - type: textarea
+    id: broke
+    attributes:
+      label: What broke
+      description: Paste any error output. For setup issues, include the output of `npx tokens-for-good session-start-hook` run manually.
+      render: shell
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: e.g. macOS 15, Windows 11, Ubuntu 24.04
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues for this agent.
+          required: true

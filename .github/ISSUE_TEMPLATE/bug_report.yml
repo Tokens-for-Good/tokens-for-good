@@ -1,0 +1,49 @@
+name: Bug report
+description: Something is broken in the npm package, CLI, MCP server, or skills.
+title: "[bug] <short summary>"
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Run `npx tokens-for-good ...`
+        2. ...
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Relevant output
+      description: Paste terminal output. For session/nudge issues, include `npx tokens-for-good session-start-hook` run manually.
+      render: shell
+  - type: input
+    id: package-version
+    attributes:
+      label: tokens-for-good version
+      placeholder: run `npx tokens-for-good --version` (e.g. 0.4.6)
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: OS, Node version, agent + version (e.g. Windows 11, Node 20.11, Claude Code)
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues.
+          required: true
