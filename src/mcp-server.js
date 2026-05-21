@@ -83,7 +83,7 @@ How it works:
 
 Research pipeline (per org, all done by your AI):
 - Research the org using web search + web fetch, following the 6-prompt methodology
-- Score using a weighted checklist (100 pts base, 120 max with extra credit)
+- Score using a weighted 6-criterion checklist (out of 120)
 - Verify citations by visiting each URL before submitting
 - Clean up writing style (no AI tells, no filler adjectives, no em dashes)
 
