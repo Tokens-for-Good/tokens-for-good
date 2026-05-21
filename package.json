@@ -3,6 +3,14 @@
   "version": "0.4.6",
   "type": "module",
   "description": "Donate your spare AI tokens to research nonprofits for Fierce Philanthropy",
+  "homepage": "https://tokensforgood.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Tokens-for-Good/tokens-for-good.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Tokens-for-Good/tokens-for-good/issues"
+  },
   "bin": {
     "tokens-for-good": "src/cli.js"
   },
@@ -26,6 +34,9 @@
     "social-impact"
   ],
   "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "prompts": "^2.4.2",

@@ -1,17 +1,44 @@
 #!/usr/bin/env node
 
 // CLI entry point for tokens-for-good.
-// Usage:
-//   npx tokens-for-good init                  Interactive first-time setup
-//   npx tokens-for-good session-start-hook    SessionStart hook (used by Claude Code)
-//   npx tokens-for-good --mcp                 Start as MCP server (default)
-//   npx tokens-for-good --status              Show project status
-//   npx tokens-for-good --impact              Show your contribution stats
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8'));
+
+const HELP = `tokens-for-good v${pkg.version}
+Donate your spare AI tokens to research nonprofits for Fierce Philanthropy.
+
+Usage:
+  npx tokens-for-good <command> [options]
+
+Commands:
+  init                  Interactive first-time setup (API key, causes, cadence)
+  session-start-hook    Emit the SessionStart hook payload (used by your agent)
+  status                Show project-wide research stats
+  impact                Show your own contribution stats (needs TFG_API_KEY)
+
+Options:
+  --status              Same as the "status" command
+  --impact              Same as the "impact" command
+  -v, --version         Print the installed version
+  -h, --help            Show this help
+
+With no command (or --mcp), tokens-for-good starts as an MCP server over
+stdio. That is how your editor's MCP client launches it.
+
+Docs: https://github.com/Tokens-for-Good/tokens-for-good`;
 
 const args = process.argv.slice(2);
 const first = args[0];
 
-if (first === 'init') {
+if (args.includes('-v') || args.includes('--version')) {
+  console.log(pkg.version);
+} else if (args.includes('-h') || args.includes('--help') || first === 'help') {
+  console.log(HELP);
+} else if (first === 'init') {
   const { runInit } = await import('./init.js');
   await runInit();
 } else if (first === 'session-start-hook') {
@@ -22,17 +49,19 @@ if (first === 'init') {
   try {
     const client = new ApiClient(process.env.TFG_API_KEY || 'public');
     const status = await client.getStatus();
+    const sys = status.system_stats || status;
     console.log('\nTokens for Good - Project Status\n');
-    console.log(`Total orgs: ${status.total_orgs}`);
-    console.log(`Pending research: ${status.pending_orgs}`);
-    console.log(`Active contributors (7d): ${status.active_contributors_7d}`);
+    console.log(`Total orgs: ${sys.total_organizations ?? status.total_orgs ?? 'n/a'}`);
+    console.log(`Pending research: ${sys.pending_organizations ?? status.pending_orgs ?? 'n/a'}`);
+    console.log(`Active contributors (7d): ${sys.active_contributors_7_days ?? status.active_contributors_7d ?? 'n/a'}`);
     console.log('\nQueue:');
-    for (const [k, v] of Object.entries(status.queue || {})) {
+    for (const [k, v] of Object.entries(status.queue_status || status.queue || {})) {
       console.log(`  ${k}: ${v}`);
     }
     console.log('\nTop Contributors:');
     (status.top_contributors || []).forEach((c, i) => {
-      console.log(`  ${i + 1}. @${c.github_handle} (${c.total_orgs} orgs, ${c.tier})`);
+      const name = c.display_name || (c.github_handle ? '@' + c.github_handle : 'anonymous');
+      console.log(`  ${c.rank ?? i + 1}. ${name} (${c.total_organizations ?? c.total_orgs} orgs, ${c.tier})`);
     });
   } catch (err) {
     console.error('Error:', err.message);
@@ -51,7 +80,13 @@ if (first === 'init') {
   } catch (err) {
     console.error('Error:', err.message);
   }
-} else {
-  // Default: start MCP server
+} else if (args.length === 0 || args.includes('--mcp')) {
+  // Default: start the MCP server. This is how the editor's MCP client launches us
+  // (init writes the config with the --mcp flag).
   await import('./mcp-server.js');
+} else {
+  // Unrecognized command/flag: show help instead of silently starting the server.
+  console.error(`Unknown command: ${args.join(' ')}\n`);
+  console.log(HELP);
+  process.exitCode = 1;
 }

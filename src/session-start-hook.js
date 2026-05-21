@@ -33,7 +33,7 @@ export function runSessionStartHook() {
     const daysSince = last ? Math.floor((Date.now() - last.getTime()) / 86_400_000) : Infinity;
     if (daysSince >= 7) {
       emit(
-        "Tokens for Good: It's been a while — say 'run /tfg' to research one org now, " +
+        "Tokens for Good: It's been a while. Say 'run /tfg' to research one org now, " +
         "or 'run /tfg-schedule daily' to automate it from here on."
       );
     }
