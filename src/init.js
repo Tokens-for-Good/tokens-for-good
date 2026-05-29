@@ -9,7 +9,7 @@ import { homedir } from 'os';
 import { fileURLToPath } from 'url';
 import { spawnSync } from 'child_process';
 import { detectPlatform, cronForSchedule, MAX_RUNS_PER_DAY } from './platform.js';
-import { loadState, saveState } from './state.js';
+import { loadState, saveState, getOrCreateInstallId } from './state.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PKG_ROOT = join(__dirname, '..');
@@ -129,6 +129,10 @@ export async function runInit() {
     writeQwenCommand('tfg');
     console.log(`✓ ${plans[1].label}`);
   }
+
+  // Generate the install_id at install time so it lines up cleanly with
+  // `installed_at` instead of being lazily created at first MCP call.
+  getOrCreateInstallId();
 
   saveState({
     ...loadState(),

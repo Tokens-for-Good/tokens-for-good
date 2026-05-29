@@ -2,6 +2,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
+import { randomUUID } from 'crypto';
 
 const STATE_DIR = join(homedir(), '.tokens-for-good');
 const STATE_FILE = join(STATE_DIR, 'state.json');
@@ -17,6 +18,7 @@ const DEFAULT_STATE = {
   runs_per_day: null,           // 1-15 when intended_frequency === 'daily', else null
   first_setup_complete: false,  // flipped by mark_setup_complete tool after first scheduled run or first one-off submit
   installed_at: null,           // ISO timestamp when init finished
+  install_id: null,             // stable per-machine UUID sent as X-TFG-Install-Id header
 };
 
 export function loadState() {
@@ -83,4 +85,17 @@ export function markSetupComplete() {
 export function isInitialized() {
   const state = loadState();
   return state.intended_flow !== null;
+}
+
+// Lazily generate and persist a stable per-machine install ID the first time
+// it's needed. Sent to the server as X-TFG-Install-Id on every request so
+// distinct installs can be counted separately from API keys (one key, N
+// machines). Existing users get an ID generated on their next session;
+// the server treats first-seen as install/activation.
+export function getOrCreateInstallId() {
+  const state = loadState();
+  if (state.install_id) return state.install_id;
+  const id = randomUUID();
+  updateState({ install_id: id });
+  return id;
 }

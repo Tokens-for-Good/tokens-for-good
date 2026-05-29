@@ -46,8 +46,9 @@ if (args.includes('-v') || args.includes('--version')) {
   runSessionStartHook();
 } else if (args.includes('--status') || first === 'status') {
   const { ApiClient } = await import('./api-client.js');
+  const { getOrCreateInstallId } = await import('./state.js');
   try {
-    const client = new ApiClient(process.env.TFG_API_KEY || 'public');
+    const client = new ApiClient(process.env.TFG_API_KEY || 'public', { version: pkg.version, installId: getOrCreateInstallId() });
     const status = await client.getStatus();
     const sys = status.system_stats || status;
     console.log('\nTokens for Good - Project Status\n');
@@ -68,8 +69,9 @@ if (args.includes('-v') || args.includes('--version')) {
   }
 } else if (args.includes('--impact') || first === 'impact') {
   const { ApiClient } = await import('./api-client.js');
+  const { getOrCreateInstallId } = await import('./state.js');
   try {
-    const client = new ApiClient(process.env.TFG_API_KEY);
+    const client = new ApiClient(process.env.TFG_API_KEY, { version: pkg.version, installId: getOrCreateInstallId() });
     const result = await client.getImpact();
     const c = result.contributor;
     console.log(`\nYour Impact (@${c.github_handle})\n`);

@@ -4,7 +4,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { ApiClient } from './api-client.js';
 import { detectPlatform, isSchedulable, getAutomationInstructions } from './platform.js';
-import { loadState, updateState, isSnoozed, snoozeDays, hasContributedToday, markContributed, markSetupComplete } from './state.js';
+import { loadState, updateState, isSnoozed, snoozeDays, hasContributedToday, markContributed, markSetupComplete, getOrCreateInstallId } from './state.js';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -32,16 +32,17 @@ function notInitialized() {
 }
 
 const apiKey = process.env.TFG_API_KEY;
+const platform = detectPlatform();
+updateState({ platform });
+const installId = getOrCreateInstallId();
+
 let client;
 try {
-  client = new ApiClient(apiKey);
+  client = new ApiClient(apiKey, { version: PKG_VERSION, platform, installId });
 } catch {
   // Will fail on tool calls, but server can still start
   client = null;
 }
-
-const platform = detectPlatform();
-updateState({ platform });
 
 const server = new McpServer({
   name: 'tokens-for-good',
@@ -223,7 +224,7 @@ server.tool('submit_peer_review', 'Submit your peer review score for a report.',
 
 server.tool('research_status', 'See the overall Tokens for Good project progress and leaderboard.', {}, async () => {
   try {
-    const clientForStatus = client || new ApiClient('dummy'); // Status is public
+    const clientForStatus = client || new ApiClient('dummy', { version: PKG_VERSION, platform, installId }); // Status is public
     const result = await clientForStatus.getStatus();
     const sys = result.system_stats || result;
     const queue = result.queue_status || result.queue || {};

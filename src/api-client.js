@@ -3,22 +3,36 @@
 const BASE_URL = process.env.FIERCE_API_URL || 'https://tokensforgood.ai/api';
 
 export class ApiClient {
-  constructor(apiKey) {
+  constructor(apiKey, { version = null, platform = null, installId = null } = {}) {
     this.apiKey = apiKey;
+    this.version = version;
+    this.platform = platform;
+    this.installId = installId;
     if (!apiKey) {
       throw new Error('TFG_API_KEY environment variable is required. Get your key at https://tokensforgood.ai/contribute');
     }
+  }
+
+  // Version, platform, and install_id ride along on every request so the
+  // server can attribute traffic by client build, editor, and per-machine
+  // install without inspecting the request body.
+  headers(extra = {}) {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      ...extra,
+    };
+    if (this.version) headers['X-TFG-Version'] = this.version;
+    if (this.platform) headers['X-TFG-Platform'] = this.platform;
+    if (this.installId) headers['X-TFG-Install-Id'] = this.installId;
+    return headers;
   }
 
   async request(method, path, body = null) {
     const url = `${BASE_URL}${path}`;
     const options = {
       method,
-      headers: {
-        'X-TFG-Api-Key': this.apiKey,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
+      headers: this.headers({ 'X-TFG-Api-Key': this.apiKey }),
       signal: AbortSignal.timeout(30000),
     };
 
@@ -73,7 +87,7 @@ export class ApiClient {
 
   async getStatus() {
     const response = await fetch(`${BASE_URL}/research/status`, {
-      headers: { 'Accept': 'application/json' },
+      headers: this.headers(),
       signal: AbortSignal.timeout(15000),
     });
     if (!response.ok) {
