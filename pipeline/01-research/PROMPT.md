@@ -114,20 +114,29 @@ Documented program changes based on evidence. "They adapted" needs specifics: wh
 
 #### EVIDENCE TABLE
 
-This is what determines the org's score. The score is computed deterministically by code from the table below, not by you. **Leave a row blank if you didn't find supporting evidence — a blank row is the honest answer and the correct one when the org doesn't have that thing.** Inventing evidence to fill a row will lower the org's real score and may get the report rejected.
+The score is computed deterministically by code from this table, not by you. Leave a row blank if you didn't find supporting evidence — a blank row is the honest answer when the org doesn't have that thing. Inventing evidence will lower the org's real score and may get the report rejected.
 
-Each row asks for a single short verbatim quote from a cited page, the real URL, and the page/document name.
+**What each row asks for** (read this before filling in the table):
 
-| Row | What to quote (verbatim from the cited page)                                       | Quote | Source URL | Source name |
-|-----|-------------------------------------------------------------------------------------|-------|------------|-------------|
-| a1  | A stated condition-level outcome goal (health, income, wellbeing, food security, survival). NOT activity-level ("train X people") and NOT access-level ("expand financial access") — those are intermediary. | | | |
-| a2  | A number or percentage attached to the goal in a1 (e.g. "reduce stunting by 30%"). The same quote as a1 is fine if it already contains the number. | | | |
-| a3  | A target population AND a target year for the goal (e.g. "children under 5 in Ghana by 2030"). Same quote as a1/a2 is fine if it covers both. | | | |
-| b   | An intermediate outcome the org MEASURED, with a number (e.g. "78% of trained CHWs retained at 24 months"). | | | |
-| c   | An ultimate outcome the org MEASURED, with a number (e.g. "27% reduction in under-five mortality"). | | | |
-| d   | A documented program change the org made BASED ON outcome data. The quote should make both the data and the change concrete (e.g. "In 2022 we moved to blended training after retention dropped to 45%"). | | | |
-| e   | An intermediate result measured with a comparison or control group. Name the design (RCT, quasi-experimental, matched comparison). Before/after alone does not count. | | | |
-| f   | An ultimate result measured with a comparison or control group. Same design rules as e. | | | |
+- **a1** — A stated condition-level outcome goal (health, income, wellbeing, food security, survival). NOT activity-level ("train X people") and NOT access-level ("expand financial access") — those are intermediary.
+- **a2** — A number or percentage attached to the goal in a1 (e.g. "reduce stunting by 30%"). The same quote as a1 is fine if it already contains the number.
+- **a3** — A target population AND a target year for the goal (e.g. "children under 5 in Ghana by 2030"). Same quote as a1/a2 is fine if it covers both.
+- **b** — An intermediate outcome the org MEASURED, with a number (e.g. "78% of trained CHWs retained at 24 months").
+- **c** — An ultimate outcome the org MEASURED, with a number (e.g. "27% reduction in under-five mortality").
+- **d** — A documented program change the org made BASED ON outcome data. The quote should make both the data and the change concrete (e.g. "In 2022 we moved to blended training after retention dropped to 45%").
+- **e** — An intermediate result measured with a comparison or control group. Name the design (RCT, quasi-experimental, matched comparison). Before/after alone does not count.
+- **f** — An ultimate result measured with a comparison or control group. Same design rules as e.
+
+| Row | Quote (verbatim from the cited page) | Source URL | Source name |
+|-----|--------------------------------------|------------|-------------|
+| a1  |                                      |            |             |
+| a2  |                                      |            |             |
+| a3  |                                      |            |             |
+| b   |                                      |            |             |
+| c   |                                      |            |             |
+| d   |                                      |            |             |
+| e   |                                      |            |             |
+| f   |                                      |            |             |
 
 **Rules for the EVIDENCE TABLE:**
 - The quoted text must appear verbatim on the cited page. Substring matching on the page body is how the score is verified.
