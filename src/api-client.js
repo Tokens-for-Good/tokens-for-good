@@ -61,10 +61,18 @@ export class ApiClient {
   }
 
   async submitReport(claimId, reportMarkdown, tokenUsage = null, metrics = null, modelUsed = null, promptVersion = null, disagreementRows = null) {
+    // The MCP tool surface accepts `estimated_tokens` as a plain number, but
+    // the API validates `token_usage` as `nullable|array` and reads
+    // `token_usage.total_tokens` for leaderboard accounting. Wrap a bare
+    // number into the shape the server expects so MCP submits don't 422.
+    const normalizedTokenUsage = typeof tokenUsage === 'number'
+      ? { total_tokens: tokenUsage }
+      : tokenUsage;
+
     return this.request('POST', '/research/submit', {
       claim_id: claimId,
       report_markdown: reportMarkdown,
-      token_usage: tokenUsage,
+      token_usage: normalizedTokenUsage,
       metrics: metrics,
       model_used: modelUsed,
       prompt_version: promptVersion,

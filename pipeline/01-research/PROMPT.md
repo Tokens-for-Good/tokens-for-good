@@ -139,7 +139,7 @@ The score is computed deterministically by code from this table, not by you. Lea
 | f   |                                      |            |             |
 
 **Rules for the EVIDENCE TABLE:**
-- The quoted text must appear verbatim on the cited page. Substring matching on the page body is how the score is verified.
+- The quoted text must appear verbatim on the cited page. A separate fact-check pass verifies your quotes against the page bodies after submission; invented or paraphrased quotes get the report flagged.
 - Use the real URL of the specific page that contains the quote. Not the org homepage. Not `example.com`.
 - A blank row is the correct answer when the evidence doesn't exist. Do not invent.
 - One row, one quote, one URL. Don't bundle two facts under one citation.

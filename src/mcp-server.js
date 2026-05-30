@@ -143,12 +143,13 @@ server.tool('submit_report', 'Submit a completed research report (or a consolida
   report_markdown: z.string().describe('The full research report in markdown'),
   estimated_tokens: z.number().describe('Estimated total tokens used: count web searches (~1K each), web fetches (~2-5K each), report output (~4 tokens/word), plus ~10K overhead'),
   model_used: z.string().optional().describe('The model that generated this report'),
+  prompt_version: z.string().optional().describe('Methodology version: "v3" for the EVIDENCE TABLE flow (default), "v2" for the legacy scorecard flow.'),
   disagreement_rows: z.array(z.enum(['a1', 'a2', 'a3', 'b', 'c', 'd', 'e', 'f'])).optional().describe('Consolidation-only: EVIDENCE TABLE row keys where the two researchers materially disagreed. >=3 auto-triggers a 3rd researcher.'),
-}, async ({ claim_id, report_markdown, estimated_tokens, model_used, disagreement_rows }) => {
+}, async ({ claim_id, report_markdown, estimated_tokens, model_used, prompt_version, disagreement_rows }) => {
   if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
 
   try {
-    const result = await client.submitReport(claim_id, report_markdown, estimated_tokens, null, model_used, PKG_VERSION, disagreement_rows);
+    const result = await client.submitReport(claim_id, report_markdown, estimated_tokens, null, model_used, prompt_version, disagreement_rows);
     markContributed();
 
     // One-off users: first successful submit completes their initial setup,
@@ -278,8 +279,11 @@ server.tool('my_impact', 'See your personal contribution stats, tier, and histor
     const result = await client.getImpact();
     const c = result.contributor;
 
+    // Older server builds omit github_handle from the impact response — fall
+    // back to display_name so we never print "@undefined".
+    const who = c.github_handle ? `@${c.github_handle}` : (c.display_name || 'you');
     return {
-      content: [{ type: 'text', text: `Your Impact (@${c.github_handle}):\n\nTier: ${c.tier}\nOrgs researched: ${c.total_orgs}\nAcceptance rate: ${c.acceptance_rate}%\nAutomation: ${c.has_schedule ? 'Active' : 'Not set up'}\n\nRecent:\n${result.claims?.slice(0, 5).map(cl => `  ${cl.organization?.name || 'Unknown'} - ${cl.status}`).join('\n') || 'None'}` }],
+      content: [{ type: 'text', text: `Your Impact (${who}):\n\nTier: ${c.tier}\nOrgs researched: ${c.total_orgs}\nAcceptance rate: ${c.acceptance_rate}%\nAutomation: ${c.has_schedule ? 'Active' : 'Not set up'}\n\nRecent:\n${result.claims?.slice(0, 5).map(cl => `  ${cl.organization?.name || 'Unknown'} - ${cl.status}`).join('\n') || 'None'}` }],
     };
   } catch (err) {
     return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
