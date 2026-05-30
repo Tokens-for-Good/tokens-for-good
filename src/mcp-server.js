@@ -112,7 +112,7 @@ server.tool('claim_org', 'Claim the next available nonprofit org to research. Bl
   try {
     const result = await client.claimOrg(plat || platform);
     return {
-      content: [{ type: 'text', text: `Claimed: ${result.org.name}\nURL: ${result.org.url}\nDescription: ${result.org.description || 'N/A'}\nSource: ${result.org.source || 'N/A'}\nClaim ID: ${result.claim_id}\nExpires: ${result.expires_at}\n\nNext steps:\n1. Call get_methodology with step="research" to get the full research instructions\n2. Follow the methodology to research this org using WebSearch and WebFetch\n3. The methodology includes citation verification and writing quality checks — complete them before submitting\n4. Submit with submit_report when done` }],
+      content: [{ type: 'text', text: `Claimed: ${result.org.name} (${result.org.url})\nclaim_id: ${result.claim_id}\nexpires: ${result.expires_at}\nNext: get_methodology step="research", then submit_report.` }],
     };
   } catch (err) {
     return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
@@ -158,11 +158,8 @@ server.tool('submit_report', 'Submit a completed research report (or a consolida
       markSetupComplete();
     }
 
-    const nextStep = disagreement_rows
-      ? 'The merged report has been scored from its EVIDENCE TABLE; the org now awaits human finalization.'
-      : 'Your report has been submitted. Under v3 dual-research it waits for the second researcher, then a consolidator merges both reports before scoring.';
     return {
-      content: [{ type: 'text', text: `Report submitted for ${result.org_name}!\n\nYour stats:\n- Total orgs: ${result.contributor_stats.total_orgs}\n- Tier: ${result.contributor_stats.tier}\n- Orgs remaining: ${result.orgs_remaining}\n\n${nextStep} Thank you for contributing!` }],
+      content: [{ type: 'text', text: `Submitted: ${result.org_name}.` }],
     };
   } catch (err) {
     return { content: [{ type: 'text', text: `Submit error: ${err.message}${err.data?.validation_errors ? '\n' + err.data.validation_errors.join('\n') : ''}` }] };

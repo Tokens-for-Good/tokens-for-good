@@ -7,9 +7,11 @@ The user wants to complete one Tokens for Good research cycle.
 
 ## What to do
 
+0. **First, check for pending consolidations.** Call `get_next_consolidation`. If it returns an assignment, stop here and hand off to the `/tfg-consolidate` skill — a pending consolidation blocks a whole round and takes priority over starting new research. If it returns "no consolidations assigned," continue to step 1.
+
 1. **Call `claim_org`** on the TFG MCP. If you have a pending peer review, it will tell you — in that case, skip to step 5 (peer review path). Otherwise, it reserves an org for you and returns a claim ID.
 
-2. **Call `get_methodology`** with `step="research"` and follow those instructions closely — they specify the web searches, scoring rubric, and output shape.
+2. **Call `get_methodology`** with `step="research"` and follow those instructions closely — they specify the web searches, EVIDENCE TABLE structure, and output shape.
 
 3. **Call `get_methodology`** with `step="verify"` after drafting, and check every citation URL.
 
