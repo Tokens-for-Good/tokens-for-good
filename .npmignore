@@ -1,0 +1,14 @@
+# Tests don't need to ship to consumers.
+src/*.test.js
+src/**/*.test.js
+
+# Local dev / scratch
+.env
+.env.*
+.npmrc
+*.log
+node_modules/
+
+# OS junk
+.DS_Store
+Thumbs.db
