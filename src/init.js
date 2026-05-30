@@ -125,6 +125,8 @@ export async function runInit() {
     console.log(`✓ ${plans[2].label}`);
     writeSkillFile('tfg');
     console.log(`✓ ${plans[3].label}`);
+    writeSkillFile('tfg-consolidate');
+    console.log(`✓ ${plans[4].label}`);
   } else if (platform === 'qwen-code') {
     writeQwenCommand('tfg');
     console.log(`✓ ${plans[1].label}`);
@@ -160,6 +162,7 @@ function planWrites(platform) {
     plans.push({ label: `${settingsPath()}  (SessionStart hook)` });
     plans.push({ label: `${skillPath('tfg-schedule')}  (/tfg-schedule skill)` });
     plans.push({ label: `${skillPath('tfg')}  (/tfg skill)` });
+    plans.push({ label: `${skillPath('tfg-consolidate')}  (/tfg-consolidate skill)` });
   } else if (platform === 'qwen-code') {
     plans.push({ label: `${qwenCommandPath('tfg')}  (/tfg slash command)` });
   }

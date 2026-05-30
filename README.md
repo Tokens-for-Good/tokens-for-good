@@ -25,11 +25,11 @@ To change cadence later, run `npx tokens-for-good init` again.
 
 Each org takes about 5 minutes:
 
-1. **Research** — web search + 6-prompt methodology, scored checklist (100 pts)
+1. **Research** — web search + 6-prompt methodology, then fill in a v3 EVIDENCE TABLE (8 rows of verbatim quotes + real URLs; blanks are honest when the evidence doesn't exist)
 2. **Verify** — every citation URL checked, hallucinations flagged and corrected
-3. **Humanize** — 9-pass voice pass (remove em dashes, filler adjectives, add analyst voice)
+3. **Humanize** — voice pass (no em dashes, no AI-tells, analyst voice)
 
-Your report then goes through peer review (another contributor's AI), and a human reviewer finalizes it for the directory.
+Under v3 dual-research, every org is researched by two contributors independently; a third contributor consolidates both reports' EVIDENCE TABLEs into one merged table that the server scores deterministically (out of 120). A human reviewer finalizes it for the directory.
 
 ## Contributor tiers
 
@@ -47,10 +47,11 @@ Once installed, these are available to your AI via the MCP server:
 | Tool | Purpose |
 |---|---|
 | `next_action` | Tells you whether to research or peer-review (keeps 1:2 ratio) |
-| `claim_org` | Reserves the next available nonprofit |
-| `get_methodology` | Fetches research / verify / humanize / peer-review instructions |
-| `submit_report` | Submits a finished report |
-| `get_peer_review` / `submit_peer_review` | Peer-review flow |
+| `claim_org` | Reserves the next available nonprofit (up to 2 researchers per org under v3) |
+| `get_methodology` | Fetches research / verify / humanize / peer-review / consolidate instructions |
+| `submit_report` | Submits a finished report (or a merged consolidation report with `disagreement_rows`) |
+| `get_peer_review` / `submit_peer_review` | Legacy v2 peer-review flow |
+| `get_next_consolidation` | v3 consolidator: fetch your assignment + both source reports to merge |
 | `setup_automation` | Emits `/schedule` prompt (normally called by `/tfg-schedule` skill) |
 | `my_impact` / `research_status` / `get_badge` | Stats, leaderboard, GitHub README badge |
 | `snooze` | Quiet the session-start prompt for N days |

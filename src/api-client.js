@@ -41,10 +41,13 @@ export class ApiClient {
     }
 
     const response = await fetch(url, options);
-    const data = await response.json();
+    // Tolerate empty bodies (204 No Content, used by /research/consolidate/next
+    // when nothing is assigned to you) — response.json() throws on empty text.
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : null;
 
     if (!response.ok) {
-      const error = new Error(data.error || data.message || `API error ${response.status}`);
+      const error = new Error((data && (data.error || data.message)) || `API error ${response.status}`);
       error.status = response.status;
       error.data = data;
       throw error;
@@ -57,7 +60,7 @@ export class ApiClient {
     return this.request('POST', '/research/claim', { platform });
   }
 
-  async submitReport(claimId, reportMarkdown, tokenUsage = null, metrics = null, modelUsed = null, promptVersion = null) {
+  async submitReport(claimId, reportMarkdown, tokenUsage = null, metrics = null, modelUsed = null, promptVersion = null, disagreementRows = null) {
     return this.request('POST', '/research/submit', {
       claim_id: claimId,
       report_markdown: reportMarkdown,
@@ -65,6 +68,7 @@ export class ApiClient {
       metrics: metrics,
       model_used: modelUsed,
       prompt_version: promptVersion,
+      disagreement_rows: disagreementRows,
     });
   }
 
@@ -74,6 +78,12 @@ export class ApiClient {
 
   async getNextPeerReview() {
     return this.request('GET', '/research/review/next');
+  }
+
+  async getNextConsolidation() {
+    // request() returns null when the server sends 204 ("nothing assigned"),
+    // so callers can just check for a falsy result.
+    return this.request('GET', '/research/consolidate/next');
   }
 
   async submitPeerReview(claimId, score, notes = null, updatedReport = null) {

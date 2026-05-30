@@ -74,19 +74,20 @@ server.resource('about', 'tokens-for-good://about', 'text/plain', async () => ({
 
 What: An MCP server that lets AI coding tool users (Claude Code, Opencode, Cursor, Windsurf, Devin) contribute their spare subscription tokens to research nonprofit organizations for Fierce Philanthropy's social impact directory.
 
-How it works:
+How it works (v3 dual-research):
 1. Sign up at https://tokensforgood.ai/contribute (GitHub OAuth)
 2. Get your API key, add it to your MCP config as TFG_API_KEY
 3. Say "Research an org for Fierce Philanthropy"
-4. Your AI claims an org, researches it (web search + analysis), verifies citations, humanizes the writing, and submits the report
-5. Another contributor's AI peer-reviews your report
-6. A human reviewer finalizes it for the directory
+4. Your AI claims an org, researches it (web search + analysis), and submits a v3 report ending in an EVIDENCE TABLE
+5. A second contributor (independently, without seeing your work) researches the same org and submits their own EVIDENCE TABLE
+6. A third contributor consolidates both reports into one merged EVIDENCE TABLE; the server scores it deterministically
+7. A human reviewer finalizes it for the directory
 
 Research pipeline (per org, all done by your AI):
-- Research the org using web search + web fetch, following the 6-prompt methodology
-- Score using a weighted 6-criterion checklist (out of 120)
-- Verify citations by visiting each URL before submitting
-- Clean up writing style (no AI tells, no filler adjectives, no em dashes)
+- Research the org using web search + web fetch, following the v3 EVIDENCE TABLE methodology
+- Fill in an EVIDENCE TABLE (8 rows of verbatim quotes + real URLs); leave blanks honestly when the evidence doesn't exist
+- The server (not you) computes the score deterministically from the merged consolidator output, out of 120
+- Real URLs only — placeholder citations (example.com) are auto-rejected
 
 Contributor tiers:
 - New: first 5 orgs, easy orgs only
@@ -118,14 +119,15 @@ server.tool('claim_org', 'Claim the next available nonprofit org to research. Bl
   }
 });
 
-server.tool('get_methodology', 'Get the full research methodology, verification instructions, or humanization instructions.', {
-  step: z.enum(['research', 'verify', 'humanize', 'peer-review']).describe('Which pipeline step to get instructions for'),
+server.tool('get_methodology', 'Get the full instructions for a pipeline step: research (the v3 EVIDENCE TABLE flow), verify, humanize, peer-review, or consolidate (the v3 dual-research merge step).', {
+  step: z.enum(['research', 'verify', 'humanize', 'peer-review', 'consolidate']).describe('Which pipeline step to get instructions for'),
 }, async ({ step }) => {
   const stepMap = {
     'research': '01-research/PROMPT.md',
     'verify': '02-verify/PROMPT.md',
     'humanize': '03-humanize/PROMPT.md',
     'peer-review': '04-peer-review/PROMPT.md',
+    'consolidate': '05-consolidate/PROMPT.md',
   };
 
   try {
@@ -136,16 +138,17 @@ server.tool('get_methodology', 'Get the full research methodology, verification 
   }
 });
 
-server.tool('submit_report', 'Submit a completed research report for an org you claimed. You MUST include estimated_tokens.', {
-  claim_id: z.string().describe('The claim ID from claim_org'),
+server.tool('submit_report', 'Submit a completed research report (or a consolidated v3 report) for a claim you own. You MUST include estimated_tokens. For consolidation claims, also pass disagreement_rows.', {
+  claim_id: z.string().describe('The claim ID from claim_org or get_next_consolidation'),
   report_markdown: z.string().describe('The full research report in markdown'),
   estimated_tokens: z.number().describe('Estimated total tokens used: count web searches (~1K each), web fetches (~2-5K each), report output (~4 tokens/word), plus ~10K overhead'),
   model_used: z.string().optional().describe('The model that generated this report'),
-}, async ({ claim_id, report_markdown, estimated_tokens, model_used }) => {
+  disagreement_rows: z.array(z.enum(['a1', 'a2', 'a3', 'b', 'c', 'd', 'e', 'f'])).optional().describe('Consolidation-only: EVIDENCE TABLE row keys where the two researchers materially disagreed. >=3 auto-triggers a 3rd researcher.'),
+}, async ({ claim_id, report_markdown, estimated_tokens, model_used, disagreement_rows }) => {
   if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
 
   try {
-    const result = await client.submitReport(claim_id, report_markdown, estimated_tokens, null, model_used, PKG_VERSION);
+    const result = await client.submitReport(claim_id, report_markdown, estimated_tokens, null, model_used, PKG_VERSION, disagreement_rows);
     markContributed();
 
     // One-off users: first successful submit completes their initial setup,
@@ -155,8 +158,11 @@ server.tool('submit_report', 'Submit a completed research report for an org you 
       markSetupComplete();
     }
 
+    const nextStep = disagreement_rows
+      ? 'The merged report has been scored from its EVIDENCE TABLE; the org now awaits human finalization.'
+      : 'Your report has been submitted. Under v3 dual-research it waits for the second researcher, then a consolidator merges both reports before scoring.';
     return {
-      content: [{ type: 'text', text: `Report submitted for ${result.org_name}!\n\nYour stats:\n- Total orgs: ${result.contributor_stats.total_orgs}\n- Tier: ${result.contributor_stats.tier}\n- Orgs remaining: ${result.orgs_remaining}\n\nYour report will now go through peer review. Thank you for contributing!` }],
+      content: [{ type: 'text', text: `Report submitted for ${result.org_name}!\n\nYour stats:\n- Total orgs: ${result.contributor_stats.total_orgs}\n- Tier: ${result.contributor_stats.tier}\n- Orgs remaining: ${result.orgs_remaining}\n\n${nextStep} Thank you for contributing!` }],
     };
   } catch (err) {
     return { content: [{ type: 'text', text: `Submit error: ${err.message}${err.data?.validation_errors ? '\n' + err.data.validation_errors.join('\n') : ''}` }] };
@@ -199,6 +205,34 @@ server.tool('get_peer_review', 'Get a draft report assigned to you for peer revi
   } catch (err) {
     if (err.status === 404) {
       return { content: [{ type: 'text', text: 'No peer reviews assigned to you right now.' }] };
+    }
+    return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
+  }
+});
+
+server.tool('get_next_consolidation', 'Get your assigned v3 consolidation: the org plus both independent source reports to merge into one canonical EVIDENCE TABLE. Returns 204-style "no assignments" when nothing is queued for you.', {}, async () => {
+  if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
+
+  try {
+    const result = await client.getNextConsolidation();
+    if (!result || !result.claim_id) {
+      return { content: [{ type: 'text', text: 'No consolidations assigned to you right now.' }] };
+    }
+    let consolidateMethodology = '';
+    try {
+      consolidateMethodology = readFileSync(join(PIPELINE_DIR, '05-consolidate/PROMPT.md'), 'utf-8');
+    } catch {
+      consolidateMethodology = 'Merge the two source EVIDENCE TABLEs into one (take the stronger row from each; flag genuine disagreements). Submit with disagreement_rows.';
+    }
+    const reports = (result.source_reports || []).map((r, i) =>
+      `### Source report ${i + 1} (submitted ${r.submitted_at || 'unknown'})\n\n${r.report_markdown}`
+    ).join('\n\n---\n\n');
+    return {
+      content: [{ type: 'text', text: `Consolidation assigned:\nOrg: ${result.org?.name}\nRound: ${result.round_id}\nYour claim ID (submit against this one): ${result.claim_id}\n\n---\n\n${consolidateMethodology}\n\n---\n\n${reports}\n\n---\n\nWhen you submit the merged report with submit_report, include disagreement_rows.` }],
+    };
+  } catch (err) {
+    if (err.status === 404 || err.status === 204) {
+      return { content: [{ type: 'text', text: 'No consolidations assigned to you right now.' }] };
     }
     return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
   }
