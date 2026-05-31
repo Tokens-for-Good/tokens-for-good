@@ -115,6 +115,16 @@ server.tool('claim_org', 'Claim the next available nonprofit org to research. Bl
       content: [{ type: 'text', text: `Claimed: ${result.org.name} (${result.org.url})\nclaim_id: ${result.claim_id}\nexpires: ${result.expires_at}\nNext: get_methodology step="research", then submit_report.` }],
     };
   } catch (err) {
+    // 409 means you already have an active claim — usually an auto-assigned
+    // 3rd-researcher slot you were handed without asking. Surface the existing
+    // org + claim_id so the agent can continue the assigned task instead of
+    // bouncing off "you have a claim" with no idea which one.
+    const existing = err.data?.existing_claim;
+    if (err.status === 409 && existing?.org) {
+      return {
+        content: [{ type: 'text', text: `You're already assigned: ${existing.org.name} (${existing.org.url})\nclaim_id: ${existing.claim_id}\nNext: get_methodology step="research", then submit_report against that claim_id.` }],
+      };
+    }
     return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
   }
 });
