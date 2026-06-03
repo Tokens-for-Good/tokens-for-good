@@ -46,11 +46,10 @@ Once installed, these are available to your AI via the MCP server:
 
 | Tool | Purpose |
 |---|---|
-| `next_action` | Tells you whether to research or peer-review (keeps 1:2 ratio) |
+| `next_action` | Tells you whether to research or consolidate next |
 | `claim_org` | Reserves the next available nonprofit (up to 2 researchers per org under v3) |
-| `get_methodology` | Fetches research / verify / humanize / peer-review / consolidate instructions |
+| `get_methodology` | Fetches research / verify / humanize / consolidate instructions |
 | `submit_report` | Submits a finished report (or a merged consolidation report with `disagreement_rows`) |
-| `get_peer_review` / `submit_peer_review` | Legacy v2 peer-review flow |
 | `get_next_consolidation` | v3 consolidator: fetch your assignment + both source reports to merge |
 | `setup_automation` | Emits `/schedule` prompt (normally called by `/tfg-schedule` skill) |
 | `my_impact` / `research_status` / `get_badge` | Stats, leaderboard, GitHub README badge |

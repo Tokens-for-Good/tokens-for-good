@@ -103,7 +103,7 @@ Scale: 750K+ US nonprofits to research.`,
 
 // --- Tools ---
 
-server.tool('claim_org', 'Claim the next available nonprofit org to research. Blocked if you have a pending peer review.', {
+server.tool('claim_org', 'Claim the next available nonprofit org to research.', {
   platform: z.string().optional().describe('Your platform (claude-code, opencode, cursor, windsurf, devin)'),
 }, async ({ platform: plat }) => {
   if (notInitialized()) return { content: [{ type: 'text', text: INIT_GUARD_MESSAGE }] };
@@ -129,14 +129,13 @@ server.tool('claim_org', 'Claim the next available nonprofit org to research. Bl
   }
 });
 
-server.tool('get_methodology', 'Get the full instructions for a pipeline step: research (the v3 EVIDENCE TABLE flow), verify, humanize, peer-review, or consolidate (the v3 dual-research merge step).', {
-  step: z.enum(['research', 'verify', 'humanize', 'peer-review', 'consolidate']).describe('Which pipeline step to get instructions for'),
+server.tool('get_methodology', 'Get the full instructions for a pipeline step: research (the v3 EVIDENCE TABLE flow), verify, humanize, or consolidate (the v3 dual-research merge step).', {
+  step: z.enum(['research', 'verify', 'humanize', 'consolidate']).describe('Which pipeline step to get instructions for'),
 }, async ({ step }) => {
   const stepMap = {
     'research': '01-research/PROMPT.md',
     'verify': '02-verify/PROMPT.md',
     'humanize': '03-humanize/PROMPT.md',
-    'peer-review': '04-peer-review/PROMPT.md',
     'consolidate': '05-consolidate/PROMPT.md',
   };
 
@@ -177,47 +176,6 @@ server.tool('submit_report', 'Submit a completed research report (or a consolida
   }
 });
 
-server.tool('get_peer_review', 'Get a draft report assigned to you for peer review. You must complete peer reviews before claiming new orgs.', {}, async () => {
-  if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
-
-  try {
-    const result = await client.getNextPeerReview();
-    let peerMethodology = '';
-    try {
-      peerMethodology = readFileSync(join(PIPELINE_DIR, '04-peer-review/PROMPT.md'), 'utf-8');
-    } catch {
-      peerMethodology = 'Score 1-4: 4=Great, 3=Good with fixes (submit corrected version), 2=Needs redo, 1=Bad actor.';
-    }
-    let factCheckNote = '';
-    if (result.automated_review?.summary) {
-      const s = result.automated_review.summary;
-      const lines = [
-        `\n\n## Automated Fact-Check Results`,
-        `Quality: ${s.overall_quality} | Fact support: ${Math.round(s.fact_support_rate * 100)}% | Avg trust: ${Math.round(s.avg_trust_score * 100)}%`,
-        `Facts checked: ${result.automated_review.facts_checked}/${result.automated_review.facts_extracted} | Citations rated: ${result.automated_review.citations_rated}`,
-      ];
-      if (s.red_flags?.length > 0) {
-        lines.push(`\nRed flags:\n${s.red_flags.map(f => `  - ${f}`).join('\n')}`);
-      }
-      if (s.strengths?.length > 0) {
-        lines.push(`\nStrengths:\n${s.strengths.map(f => `  - ${f}`).join('\n')}`);
-      }
-      lines.push(`\nUse these results to focus your spot-checks on flagged areas.`);
-      factCheckNote = lines.join('\n');
-    } else if (result.automated_review) {
-      factCheckNote = `\n\nAutomated Fact-Check: ${result.automated_review.status} (no summary available yet)`;
-    }
-    return {
-      content: [{ type: 'text', text: `Peer review assigned:\nOrg: ${result.org.name}\nAuthor: ${result.author}\nClaim ID: ${result.claim_id}${factCheckNote}\n\n---\n\n${peerMethodology}\n\n---\n\n${result.report_markdown}\n\n---\n\nUse submit_peer_review with your score and notes.` }],
-    };
-  } catch (err) {
-    if (err.status === 404) {
-      return { content: [{ type: 'text', text: 'No peer reviews assigned to you right now.' }] };
-    }
-    return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
-  }
-});
-
 server.tool('get_next_consolidation', 'Get your assigned v3 consolidation: the org plus both independent source reports to merge into one canonical EVIDENCE TABLE. Returns 204-style "no assignments" when nothing is queued for you.', {}, async () => {
   if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
 
@@ -242,24 +200,6 @@ server.tool('get_next_consolidation', 'Get your assigned v3 consolidation: the o
     if (err.status === 404 || err.status === 204) {
       return { content: [{ type: 'text', text: 'No consolidations assigned to you right now.' }] };
     }
-    return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
-  }
-});
-
-server.tool('submit_peer_review', 'Submit your peer review score for a report.', {
-  claim_id: z.string().describe('The claim ID of the report being reviewed'),
-  score: z.number().int().min(1).max(4).describe('Score: 4=great, 3=good with fixes, 2=needs redo, 1=bad actor'),
-  notes: z.string().optional().describe('Review notes explaining the score'),
-  updated_report: z.string().optional().describe('If score is 3, the fixed version of the report'),
-}, async ({ claim_id, score, notes, updated_report }) => {
-  if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
-
-  try {
-    const result = await client.submitPeerReview(claim_id, score, notes, updated_report);
-    return {
-      content: [{ type: 'text', text: `Peer review submitted for ${result.org_name}.\nScore: ${result.score}/4\n\nYou can now claim a new org to research.` }],
-    };
-  } catch (err) {
     return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
   }
 });
@@ -327,7 +267,7 @@ server.tool('snooze', 'Snooze Tokens for Good reminders. Call this when the user
 
 // --- Prompts (session start) ---
 
-server.prompt('session_start', 'Check if you should research an org or complete a peer review', {}, async () => {
+server.prompt('session_start', 'Check if you should research an org', {}, async () => {
   // No API key -- guide through setup
   if (!client) {
     return {
@@ -339,19 +279,6 @@ server.prompt('session_start', 'Check if you should research an org or complete 
   }
 
   const state = loadState();
-
-  // Check for pending peer review first
-  try {
-    await client.getNextPeerReview();
-    return {
-      messages: [{
-        role: 'user',
-        content: { type: 'text', text: `You have a pending peer review to complete before you can claim a new org. Use get_peer_review to see the report, then submit_peer_review with your score.` },
-      }],
-    };
-  } catch {
-    // No pending review, continue
-  }
 
   if (isSnoozed()) {
     return { messages: [{ role: 'user', content: { type: 'text', text: 'Tokens for Good is snoozed. No action needed.' } }] };

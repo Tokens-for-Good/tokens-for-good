@@ -84,23 +84,10 @@ export class ApiClient {
     return this.request('POST', '/research/release', { claim_id: claimId });
   }
 
-  async getNextPeerReview() {
-    return this.request('GET', '/research/review/next');
-  }
-
   async getNextConsolidation() {
     // request() returns null when the server sends 204 ("nothing assigned"),
     // so callers can just check for a falsy result.
     return this.request('GET', '/research/consolidate/next');
-  }
-
-  async submitPeerReview(claimId, score, notes = null, updatedReport = null) {
-    return this.request('POST', '/research/review/submit', {
-      claim_id: claimId,
-      score,
-      notes,
-      updated_report: updatedReport,
-    });
   }
 
   async getStatus() {
