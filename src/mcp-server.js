@@ -255,6 +255,20 @@ server.tool('setup_automation', 'Get the scheduled-research prompt + setup instr
 
 server.tool('mark_setup_complete', 'Called by the /tfg-schedule skill after /schedule confirms, or by the /tfg skill after a successful first submission. Flips local state so the SessionStart hook stops emitting first-session instructions. Idempotent — safe to call multiple times.', {}, async () => {
   markSetupComplete();
+
+  // If the user just wired up a recurring schedule, tell the server too. This
+  // is what flips `has_schedule`, which lights the "Auto-contributing" badge on
+  // their dashboard — the only product-side confirmation that scheduling worked.
+  // Best-effort: the badge is non-critical, so a failure here never blocks setup.
+  const state = loadState();
+  if (client && (state.intended_flow === 'scheduled' || state.auto_schedule)) {
+    try {
+      await client.enableSchedule();
+    } catch {
+      // Dashboard badge is cosmetic; /schedule in Claude Code is the source of truth.
+    }
+  }
+
   return { content: [{ type: 'text', text: 'Marked setup complete. The SessionStart hook will go silent from the next session.' }] };
 });
 
