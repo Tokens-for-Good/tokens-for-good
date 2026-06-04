@@ -326,11 +326,23 @@ function printClosingGuidance(platform, flow, freq, runsPerDay = 1) {
   const cadence = freq === 'daily' && runsPerDay > 1 ? `daily (${runsPerDay}× per day)` : freq;
   if (platform === 'claude-code') {
     if (flow === 'scheduled') {
-      console.log(`Open Claude Code — your first session will set up /schedule at ${cadence} cadence automatically.`);
+      console.log(`Next: open Claude Code and send any message — even "hi".`);
+      console.log(`On that first message Claude sets up /schedule at ${cadence} cadence and`);
+      console.log(`confirms with "Scheduled ✓". Prefer to be explicit? Just run /tfg-schedule.`);
+      console.log('');
+      console.log(`Heads up: nothing happens the instant the window opens. Claude Code only`);
+      console.log(`runs setup hooks after your first message, so type something to kick it off.`);
+      console.log('');
+      console.log(`Verify it worked: run /schedule in Claude Code to see your recurring task,`);
+      console.log(`or check for the "Auto-contributing" badge on your dashboard.`);
     } else {
-      console.log('Open Claude Code — your first session will kick off a one-off research task.');
+      console.log(`Next: open Claude Code and send any message — even "hi" — and Claude will`);
+      console.log(`offer to research your first org. Prefer to be explicit? Just run /tfg.`);
+      console.log('');
+      console.log(`Heads up: nothing happens the instant the window opens. Claude Code only`);
+      console.log(`runs setup hooks after your first message, so type something to kick it off.`);
     }
-    console.log('You can change this anytime with `npx tokens-for-good init`.\n');
+    console.log('\nChange this anytime with `npx tokens-for-good init`.\n');
     return;
   }
   if (platform === 'opencode') {
