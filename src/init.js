@@ -259,30 +259,62 @@ function writeSessionStartHook() {
   cfg.hooks.SessionStart ??= [];
 
   const signature = 'tokens-for-good session-start-hook';
-  const already = cfg.hooks.SessionStart.some(entry => JSON.stringify(entry).includes(signature));
-  if (!already) {
-    cfg.hooks.SessionStart.push({
-      matcher: '',
-      hooks: [{
-        type: 'command',
-        command: hookCommand(),
-      }],
-    });
-  }
+  // Replace any prior TFG entry rather than skip-if-present, so re-running init
+  // repairs or upgrades a stale command (e.g. one missing the absolute npx path
+  // or the resilience flags below). Without this, a broken hook can never be
+  // fixed by re-running init.
+  cfg.hooks.SessionStart = cfg.hooks.SessionStart.filter(
+    entry => !JSON.stringify(entry).includes(signature),
+  );
+  cfg.hooks.SessionStart.push({
+    matcher: '',
+    hooks: [{
+      type: 'command',
+      command: hookCommand(),
+    }],
+  });
   writeJson(abs, cfg);
 }
 
-// Claude Code runs SessionStart hooks under Git Bash on Windows with a
-// stripped PATH that typically does not include C:\Program Files\nodejs,
-// so a bare `npx` lookup fails silently. Resolve the absolute npx path at
-// init time (when the user's full PATH is available) and bake it into the
-// hook command so it works regardless of Claude Code's hook-runner PATH.
+// Claude Code runs SessionStart hooks with a stripped PATH that often omits
+// the node/npx bin dir — C:\Program Files\nodejs on Windows, or the nvm/
+// homebrew bin when Claude Code is launched from the macOS Dock/Finder — so a
+// bare `npx` lookup fails and the session shows a "hook error". Resolve the
+// absolute npx path at init time (full PATH available) and bake it in.
+//
+// `2>/dev/null || true` makes the hook non-fatal: this is an optional donation
+// tool, so a missing npx, offline registry, or any other hiccup must never
+// disrupt the user's session. Hooks run under bash/sh on every platform (Git
+// Bash on Windows), so this syntax is portable.
 function hookCommand() {
-  if (!IS_WINDOWS) return 'npx -y tokens-for-good session-start-hook';
+  const npxPath = resolveNpxPath();
+  // Bash accepts double-quoted paths with spaces; backslashes get JSON-escaped on write.
+  return `"${npxPath}" -y tokens-for-good session-start-hook 2>/dev/null || true`;
+}
 
-  const npxPath = resolveWindowsNpxPath();
-  // Bash accepts double-quoted paths with spaces; escape backslashes for JSON.
-  return `"${npxPath}" -y tokens-for-good session-start-hook`;
+function resolveNpxPath() {
+  if (IS_WINDOWS) {
+    return resolveWindowsNpxPath();
+  }
+
+  // macOS / Linux: prefer `which npx`, then npx alongside the running node
+  // binary, then a bare `npx` fallback (relies on PATH — last resort).
+  try {
+    const r = spawnSync('which', ['npx'], { encoding: 'utf-8' });
+    if (r.status === 0) {
+      const first = r.stdout.trim().split(/\r?\n/)[0];
+      if (first && existsSync(first)) {
+        return first;
+      }
+    }
+  } catch { /* fall through */ }
+
+  const alongside = join(dirname(process.execPath), 'npx');
+  if (existsSync(alongside)) {
+    return alongside;
+  }
+
+  return 'npx';
 }
 
 function resolveWindowsNpxPath() {
