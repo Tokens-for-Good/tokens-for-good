@@ -76,6 +76,17 @@ test('submitReport forwards disagreement_rows and prompt_version', async () => {
   });
 });
 
+test('enableSchedule POSTs to /research/enable-schedule (lights the dashboard badge)', async () => {
+  await withMockFetch(async (calls) => {
+    const client = new ApiClient('tfg_test_key');
+    await client.enableSchedule();
+
+    assert.equal(calls.length, 1);
+    assert.match(calls[0].url, /\/research\/enable-schedule$/);
+    assert.equal(calls[0].opts.method, 'POST');
+  });
+});
+
 test('request() returns null on 204 No Content (consolidation queue empty)', async () => {
   const original = globalThis.fetch;
   globalThis.fetch = async () => new Response(null, { status: 204 });
