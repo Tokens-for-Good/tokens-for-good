@@ -365,6 +365,10 @@ function printClosingGuidance(platform, flow, freq, runsPerDay = 1) {
       console.log(`Heads up: nothing happens the instant the window opens. Claude Code only`);
       console.log(`runs setup hooks after your first message, so type something to kick it off.`);
       console.log('');
+      console.log('');
+      console.log(`Once it's scheduled, runs happen on Anthropic's cloud — your computer can be`);
+      console.log(`off and Claude Code doesn't need to be open. It just runs on its own from here.`);
+      console.log('');
       console.log(`Verify it worked: run /schedule in Claude Code to see your recurring task,`);
       console.log(`or check for the "Auto-contributing" badge on your dashboard.`);
     } else {

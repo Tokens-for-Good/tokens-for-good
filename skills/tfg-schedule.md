@@ -29,7 +29,7 @@ Describe cadence by frequency only — keep token costs and dollar amounts out o
 
 5. **On success, call the TFG MCP `mark_setup_complete` tool.** This flips the user's local state so the SessionStart hook stops nudging.
 
-6. **Confirm to the user** in one sentence, e.g. *"Scheduled ✓ — your spare tokens will research a nonprofit on that cadence from here on. You can change it anytime with /schedule."*
+6. **Confirm to the user** in one or two sentences, and reassure them it runs unattended, e.g. *"Scheduled ✓ — your spare tokens will research a nonprofit on that cadence from here on. It runs on Anthropic's cloud, so your computer can be off and Claude Code doesn't need to be open. Change it anytime with /schedule."*
 
 ## If something goes wrong
 
