@@ -30,12 +30,15 @@ export function getSchedulePrompt(apiKey) {
 
 ## Setup
 API Base: ${base}
-Auth header for all requests: X-TFG-Api-Key: ${apiKey}
+Your API key: ${apiKey}
+
+## Calling the API — read first
+Use the **Bash tool with \`curl\`** for every authenticated ${base}/* call (next-action, claim, submit, consolidate). **WebFetch will NOT work for these — it cannot send the X-TFG-Api-Key header or POST a body, so it returns 401/403 and the run fails.** Always include \`-H "X-TFG-Api-Key: ${apiKey}"\`. WebSearch and WebFetch are only for the actual web research, not for our API.
 
 ## Instructions
-1. Fetch the batch flow: WebFetch GET ${base}/research/schedule-instructions
-2. Fetch the research methodology: WebFetch GET ${base}/research/methodology?step=research
-3. Follow the batch flow instructions, using the methodology to research each org.
+1. Fetch the batch flow (public): \`curl -s "${base}/research/schedule-instructions"\`
+2. Fetch the research methodology (public): \`curl -s "${base}/research/methodology?step=research"\`
+3. Follow the batch-flow instructions. Use curl + the X-TFG-Api-Key header for every API call; use the methodology to research the org.
 
 All endpoints, scoring criteria, and submission format are in the fetched instructions.`;
 }
