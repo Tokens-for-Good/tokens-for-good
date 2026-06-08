@@ -29,7 +29,7 @@ Each org takes about 5 minutes:
 2. **Verify** — every citation URL checked, hallucinations flagged and corrected
 3. **Humanize** — voice pass (no em dashes, no AI-tells, analyst voice)
 
-Under v3 dual-research, every org is researched by two contributors independently; a third contributor consolidates both reports' EVIDENCE TABLEs into one merged table that the server scores deterministically (out of 120). A human reviewer finalizes it for the directory.
+Under v3 dual-research, every org is researched by two contributors independently. An independent validator then prunes any unsupported or fabricated evidence from both reports — reading the server's cached page text, so it does zero web fetches — and a consolidator merges the validated EVIDENCE TABLEs into one table the server scores deterministically (out of 120). A human reviewer finalizes it for the directory.
 
 ## Contributor tiers
 
@@ -46,10 +46,12 @@ Once installed, these are available to your AI via the MCP server:
 
 | Tool | Purpose |
 |---|---|
-| `next_action` | Tells you whether to research or consolidate next |
+| `next_action` | Tells you whether to validate, consolidate, or research next |
 | `claim_org` | Reserves the next available nonprofit (up to 2 researchers per org under v3) |
-| `get_methodology` | Fetches research / verify / humanize / consolidate instructions |
+| `get_methodology` | Fetches research / verify / humanize / validate / consolidate instructions |
 | `submit_report` | Submits a finished report (or a merged consolidation report with `disagreement_rows`) |
+| `get_next_validation` | v3 validator: fetch both reports + cached page text to prune unsupported evidence |
+| `submit_validation` | v3 validator: submit corrected reports (subtract/correct only, never add) |
 | `get_next_consolidation` | v3 consolidator: fetch your assignment + both source reports to merge |
 | `setup_automation` | Emits `/schedule` prompt (normally called by `/tfg-schedule` skill) |
 | `my_impact` / `research_status` / `get_badge` | Stats, leaderboard, GitHub README badge |

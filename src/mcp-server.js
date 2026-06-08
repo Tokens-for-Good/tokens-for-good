@@ -129,13 +129,14 @@ server.tool('claim_org', 'Claim the next available nonprofit org to research.', 
   }
 });
 
-server.tool('get_methodology', 'Get the full instructions for a pipeline step: research (the v3 EVIDENCE TABLE flow), verify, humanize, or consolidate (the v3 dual-research merge step).', {
-  step: z.enum(['research', 'verify', 'humanize', 'consolidate']).describe('Which pipeline step to get instructions for'),
+server.tool('get_methodology', 'Get the full instructions for a pipeline step: research (the v3 EVIDENCE TABLE flow), verify, humanize, validate (prune unsupported evidence from two reports using cached page text), or consolidate (the v3 dual-research merge step).', {
+  step: z.enum(['research', 'verify', 'humanize', 'validate', 'consolidate']).describe('Which pipeline step to get instructions for'),
 }, async ({ step }) => {
   const stepMap = {
     'research': '01-research/PROMPT.md',
     'verify': '02-verify/PROMPT.md',
     'humanize': '03-humanize/PROMPT.md',
+    'validate': '04-validate/PROMPT.md',
     'consolidate': '05-consolidate/PROMPT.md',
   };
 
@@ -201,6 +202,59 @@ server.tool('get_next_consolidation', 'Get your assigned v3 consolidation: the o
       return { content: [{ type: 'text', text: 'No consolidations assigned to you right now.' }] };
     }
     return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
+  }
+});
+
+server.tool('get_next_validation', 'Get your assigned v3 validation: both researchers\' reports, the server\'s deterministic citation verdicts, and the cached text of every page they cite. You validate using ONLY that cached text (no web fetches), pruning unsupported/fabricated EVIDENCE TABLE rows. Returns "no assignments" when nothing is queued for you.', {}, async () => {
+  if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
+
+  try {
+    const result = await client.getNextValidation();
+    if (!result || !result.claim_id) {
+      return { content: [{ type: 'text', text: 'No validations assigned to you right now.' }] };
+    }
+    let validateMethodology = '';
+    try {
+      validateMethodology = readFileSync(join(PIPELINE_DIR, '04-validate/PROMPT.md'), 'utf-8');
+    } catch {
+      validateMethodology = 'Using ONLY the cached page text provided, remove EVIDENCE TABLE rows whose quote is not on its cited page (verdict "fabricated"), and correct quotes that do not match. You may only SUBTRACT or CORRECT-to-source, never ADD. Submit the corrected reports with submit_validation.';
+    }
+    const reports = (result.source_reports || []).map((r, i) =>
+      `### Source report ${i + 1} — claim_id ${r.claim_id} (submitted ${r.submitted_at || 'unknown'})\n\nServer citation verdicts: ${JSON.stringify(r.citation_verdicts || {})}\n\n${r.report_markdown}`
+    ).join('\n\n---\n\n');
+    const pages = (result.cached_pages || []).map((p) =>
+      `#### ${p.url}  [${p.fetch_status}${p.http_status ? ' ' + p.http_status : ''}]\n${p.text ? p.text : '(no text — not machine-checkable)'}`
+    ).join('\n\n');
+    return {
+      content: [{ type: 'text', text: `Validation assigned:\nOrg: ${result.org?.name}\nRound: ${result.round_id}\nYour validation claim ID (submit against this one): ${result.claim_id}\n\n---\n\n${validateMethodology}\n\n--- SOURCE REPORTS ---\n\n${reports}\n\n--- CACHED PAGE TEXT (use ONLY this; do not fetch) ---\n\n${pages}` }],
+    };
+  } catch (err) {
+    if (err.status === 404 || err.status === 204) {
+      return { content: [{ type: 'text', text: 'No validations assigned to you right now.' }] };
+    }
+    return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
+  }
+});
+
+server.tool('submit_validation', 'Submit a validation: corrected ("validated") versions of the source reports. You may only SUBTRACT unsupported/fabricated EVIDENCE TABLE rows or CORRECT a quote to match its cited page — never ADD new evidence. Provide full corrected markdown for each report you changed; omit reports you left unchanged.', {
+  claim_id: z.string().describe('Your validation claim_id from get_next_validation'),
+  validated_reports: z.array(z.object({
+    claim_id: z.string().describe('A source report\'s claim_id'),
+    report_markdown: z.string().describe('That report\'s full corrected markdown'),
+  })).describe('One entry per report you changed. Omit reports you did not change.'),
+  validation_notes: z.string().optional().describe('Short summary of what you cut/corrected and why'),
+  estimated_tokens: z.number().optional().describe('Honest total token estimate for this validation run'),
+}, async ({ claim_id, validated_reports, validation_notes, estimated_tokens }) => {
+  if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
+
+  try {
+    const result = await client.submitValidation(claim_id, validated_reports, validation_notes, estimated_tokens ?? null);
+    markContributed();
+    return {
+      content: [{ type: 'text', text: `Validation submitted for ${result.org_name}: ${result.reports_validated} report(s) validated. Consolidation will follow.` }],
+    };
+  } catch (err) {
+    return { content: [{ type: 'text', text: `Validation error: ${err.message}${err.data?.validation_errors ? '\n' + err.data.validation_errors.join('\n') : ''}` }] };
   }
 });
 

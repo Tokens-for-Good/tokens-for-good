@@ -98,3 +98,30 @@ test('request() returns null on 204 No Content (consolidation queue empty)', asy
     globalThis.fetch = original;
   }
 });
+
+test('getNextValidation returns null on 204 (validation queue empty)', async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => new Response(null, { status: 204 });
+  try {
+    const client = new ApiClient('tfg_test_key');
+    const result = await client.getNextValidation();
+    assert.equal(result, null);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test('submitValidation posts validated_reports and wraps numeric token usage', async () => {
+  await withMockFetch(async (calls) => {
+    const client = new ApiClient('tfg_test_key');
+    const validated = [{ claim_id: 'src-uuid', report_markdown: 'cleaned report' }];
+    await client.submitValidation('val-uuid', validated, 'dropped row f', 5000);
+
+    assert.match(calls[0].url, /\/research\/validate\/submit$/);
+    const body = JSON.parse(calls[0].opts.body);
+    assert.equal(body.claim_id, 'val-uuid');
+    assert.deepEqual(body.validated_reports, validated);
+    assert.equal(body.validation_notes, 'dropped row f');
+    assert.deepEqual(body.token_usage, { total_tokens: 5000 });
+  });
+});

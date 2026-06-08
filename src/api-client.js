@@ -90,6 +90,24 @@ export class ApiClient {
     return this.request('GET', '/research/consolidate/next');
   }
 
+  async getNextValidation() {
+    // 204 -> null when nothing is assigned, same as consolidation.
+    return this.request('GET', '/research/validate/next');
+  }
+
+  async submitValidation(claimId, validatedReports, validationNotes = null, tokenUsage = null) {
+    const normalizedTokenUsage = typeof tokenUsage === 'number'
+      ? { total_tokens: tokenUsage }
+      : tokenUsage;
+
+    return this.request('POST', '/research/validate/submit', {
+      claim_id: claimId,
+      validated_reports: validatedReports,
+      validation_notes: validationNotes,
+      token_usage: normalizedTokenUsage,
+    });
+  }
+
   async getStatus() {
     const response = await fetch(`${BASE_URL}/research/status`, {
       headers: this.headers(),
