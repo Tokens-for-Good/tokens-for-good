@@ -44,5 +44,8 @@ You do **no web research and no fetching**. The server already fetched every cit
 ## If something goes wrong
 
 - **`get_next_validation` returns "no validations assigned"** → there isn't one queued. The user can run `/tfg` to do a fresh research run instead.
-- **`submit_validation` returns validation errors** → a validated report is no longer structurally valid (it still needs all PROMPT/Section headings + an EVIDENCE TABLE + SOURCES). You pruned too much structure; restore the headings and resubmit with the same `claim_id`.
+- **`submit_validation` says a report is "no longer structurally valid"** → you removed a heading/section, not just evidence. It still needs all PROMPT/Section headings + an EVIDENCE TABLE + SOURCES. Restore the structure and resubmit with the same `claim_id`.
+- **`submit_validation` says it "introduces new URLs"** → you added or changed a citation URL. Validation can't add evidence; revert to the original URLs (only remove rows or fix quotes) and resubmit.
+- **`submit_validation` says a row's "quote is not on the cited page"** → you rewrote a quote to text the page doesn't contain. Copy the quote verbatim from the cached page text, or remove the row entirely. Resubmit with the same `claim_id`.
+- **You referenced a claim_id you weren't given** → only the source `claim_id`s from `get_next_validation` are valid in `validated_reports`. Re-read its output.
 - **No cached page text for a citation** → treat that citation as unverifiable; do not fetch it yourself.

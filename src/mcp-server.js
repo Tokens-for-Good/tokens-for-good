@@ -254,7 +254,14 @@ server.tool('submit_validation', 'Submit a validation: corrected ("validated") v
       content: [{ type: 'text', text: `Validation submitted for ${result.org_name}: ${result.reports_validated} report(s) validated. Consolidation will follow.` }],
     };
   } catch (err) {
-    return { content: [{ type: 'text', text: `Validation error: ${err.message}${err.data?.validation_errors ? '\n' + err.data.validation_errors.join('\n') : ''}` }] };
+    // Surface the structured detail the server returns so the agent knows
+    // exactly what to fix: which rows' quotes weren't on the page, which URLs
+    // were newly introduced, or which structure checks failed.
+    const detail = [];
+    if (err.data?.validation_errors) detail.push(err.data.validation_errors.join('\n'));
+    if (err.data?.fabricated_rows) detail.push(`Rows whose quote is not on the cited page: ${err.data.fabricated_rows.join(', ')}. Copy the quote verbatim from the cached page text, or remove the row.`);
+    if (err.data?.new_urls) detail.push(`New URLs not in the original (not allowed): ${err.data.new_urls.join(', ')}`);
+    return { content: [{ type: 'text', text: `Validation error: ${err.message}${detail.length ? '\n' + detail.join('\n') : ''}` }] };
   }
 });
 

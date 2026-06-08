@@ -33,6 +33,8 @@ Start from the server's verdicts, then apply judgment:
 
 **The one hard rule: you may only SUBTRACT rows or CORRECT a quote to match its cited page. You may NEVER ADD new evidence, new rows, or new URLs.** Adding evidence is the researcher's job, not yours. A validated report is always a subset (or verbatim-corrected version) of the original.
 
+This is **enforced by the server**: your submission is rejected (422) if it introduces a URL the original didn't cite, OR if any EVIDENCE TABLE row's quote is not actually found on its cited page. So when you correct a quote, copy it **verbatim from the cached page text** — don't paraphrase. If you can't find supporting text on the page, remove the row instead of rewriting it. (Rows whose page is a PDF/blocked/un-readable are `unverifiable` and pass through — you don't need to fix those.)
+
 If a report was already clean, return it unchanged (or simply omit it from your submission — omitted reports keep their original).
 
 ## Submit
