@@ -43,7 +43,9 @@ Call `submit_validation` with:
 - `validation_notes`: a short summary of what you cut and why (e.g. "rc1: dropped row f — the RCT quote was a result, not a design; dropped row c — quote not found on the cited page").
 - `estimated_tokens`: honest estimate (validation is read-heavy but no web work).
 
-Each validated report must still be a structurally valid v3 report (all PROMPT/Section headings + an EVIDENCE TABLE + SOURCES). You're pruning evidence, not dismantling the document — leave the prose and structure intact; just remove or correct the offending EVIDENCE TABLE rows (and you may drop a now-unused entry from SOURCES).
+If **both reports are already clean** (nothing to remove or correct), submit `validated_reports` as an **empty array** with a note saying so — the round then proceeds to consolidation unchanged. Don't resubmit a report you didn't change.
+
+Each validated report must still be a structurally valid v3 report (all PROMPT/Section headings + an EVIDENCE TABLE + SOURCES). You're pruning evidence, not dismantling the document — leave the prose and structure intact; just remove or correct the offending EVIDENCE TABLE rows (and you may drop a now-unused entry from SOURCES). **Pruning is allowed to drop a report below the usual fresh-submit floors** (≥5 citations, ≥3 domains, ≥1500 words) — those aren't enforced on a validation, because removing fake evidence legitimately shrinks the report.
 
 ## What not to do
 

@@ -27,7 +27,7 @@ You do **no web research and no fetching**. The server already fetched every cit
 
 4. **Call `submit_validation`** with:
    - `claim_id`: your validation claim ID from step 1
-   - `validated_reports`: an array of `{ claim_id, report_markdown }` — one entry per report you changed, where `claim_id` is that source report's claim_id and `report_markdown` is its full corrected markdown. Omit reports you didn't change.
+   - `validated_reports`: an array of `{ claim_id, report_markdown }` — one entry per report you changed, where `claim_id` is that source report's claim_id and `report_markdown` is its full corrected markdown. Omit reports you didn't change. **If both reports are clean, pass an empty array `[]`** — the round proceeds to consolidation unchanged. Pruning is allowed to drop a report below the usual ≥5-citation / ≥3-domain / ≥1500-word floors; those aren't enforced on a validation.
    - `validation_notes`: a short summary of what you cut/corrected and why
    - `estimated_tokens`: an honest estimate (validation is read-heavy, no web work)
 
