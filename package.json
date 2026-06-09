@@ -1,8 +1,8 @@
 {
   "name": "tokens-for-good",
-  "version": "0.4.23",
+  "version": "0.4.24",
   "type": "module",
-  "description": "Donate your spare AI tokens to research nonprofits for Fierce Philanthropy",
+  "description": "Contribute your spare AI tokens to research nonprofits for Fierce Philanthropy",
   "homepage": "https://tokensforgood.ai",
   "repository": {
     "type": "git",

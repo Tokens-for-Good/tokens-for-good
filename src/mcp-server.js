@@ -24,7 +24,7 @@ Tell the user to run this in their terminal (not here in the chat), then restart
 The init command asks them to choose a contribution cadence (daily / weekly / one-off) and wires up everything else automatically. It takes about 30 seconds.`;
 
 // Gate: only fires for genuinely cold installs where state.json is missing
-// entirely. Existing users — including those on the pre-0.4.0 schema — pass
+// entirely. Existing users; including those on the pre-0.4.0 schema; pass
 // through untouched. Init writes state.json on first successful completion,
 // so after that this never fires again.
 function notInitialized() {
@@ -61,16 +61,16 @@ The command walks them through everything in under a minute:
 3. Pick a cadence: **daily** (recommended; choose how many runs per day), weekly, or one-off
 4. Confirm
 
-init writes everything — MCP config, SessionStart hook, /tfg and /tfg-schedule skills, and their recorded preference — in one shot. The first session after init runs their chosen flow automatically.
+init writes everything (MCP config, SessionStart hook, /tfg and /tfg-schedule skills, and their recorded preference) in one shot. The first session after init runs their chosen flow automatically.
 
-**What is Tokens for Good?** A way for developers to donate their spare AI subscription tokens to research nonprofit organizations for Fierce Philanthropy's social impact directory. Each org takes about 5 minutes. Contributors get credit on a public leaderboard.`;
+**What is Tokens for Good?** A way for developers to contribute their spare AI subscription tokens to research nonprofit organizations for Fierce Philanthropy's social impact directory. Each org takes about 5 minutes. Contributors get credit on a public leaderboard.`;
 
 // --- Resources ---
 
 server.resource('about', 'tokens-for-good://about', 'text/plain', async () => ({
   contents: [{
     uri: 'tokens-for-good://about',
-    text: `Tokens for Good - Donate Your Spare AI Tokens to Research Nonprofits
+    text: `Tokens for Good - Contribute Your Spare AI Tokens to Research Nonprofits
 
 What: An MCP server that lets AI coding tool users (Claude Code, Opencode, Cursor, Windsurf, Devin) contribute their spare subscription tokens to research nonprofit organizations for Fierce Philanthropy's social impact directory.
 
@@ -87,7 +87,7 @@ Research pipeline (per org, all done by your AI):
 - Research the org using web search + web fetch, following the v3 EVIDENCE TABLE methodology
 - Fill in an EVIDENCE TABLE (8 rows of verbatim quotes + real URLs); leave blanks honestly when the evidence doesn't exist
 - The server (not you) computes the score deterministically from the merged consolidator output, out of 120
-- Real URLs only — placeholder citations (example.com) are auto-rejected
+- Real URLs only; placeholder citations (example.com) are auto-rejected
 
 Contributor tiers:
 - New: first 5 orgs, easy orgs only
@@ -115,7 +115,7 @@ server.tool('claim_org', 'Claim the next available nonprofit org to research.', 
       content: [{ type: 'text', text: `Claimed: ${result.org.name} (${result.org.url})\nclaim_id: ${result.claim_id}\nexpires: ${result.expires_at}\nNext: get_methodology step="research", then submit_report.` }],
     };
   } catch (err) {
-    // 409 means you already have an active claim — usually an auto-assigned
+    // 409 means you already have an active claim; usually an auto-assigned
     // 3rd-researcher slot you were handed without asking. Surface the existing
     // org + claim_id so the agent can continue the assigned task instead of
     // bouncing off "you have a claim" with no idea which one.
@@ -220,10 +220,10 @@ server.tool('get_next_validation', 'Get your assigned v3 validation: both resear
       validateMethodology = 'Using ONLY the cached page text provided, remove EVIDENCE TABLE rows whose quote is not on its cited page (verdict "fabricated"), and correct quotes that do not match. You may only SUBTRACT or CORRECT-to-source, never ADD. Submit the corrected reports with submit_validation.';
     }
     const reports = (result.source_reports || []).map((r, i) =>
-      `### Source report ${i + 1} — claim_id ${r.claim_id} (submitted ${r.submitted_at || 'unknown'})\n\nServer citation verdicts: ${JSON.stringify(r.citation_verdicts || {})}\n\n${r.report_markdown}`
+      `### Source report ${i + 1}; claim_id ${r.claim_id} (submitted ${r.submitted_at || 'unknown'})\n\nServer citation verdicts: ${JSON.stringify(r.citation_verdicts || {})}\n\n${r.report_markdown}`
     ).join('\n\n---\n\n');
     const pages = (result.cached_pages || []).map((p) =>
-      `#### ${p.url}  [${p.fetch_status}${p.http_status ? ' ' + p.http_status : ''}]\n${p.text ? p.text : '(no text — not machine-checkable)'}`
+      `#### ${p.url}  [${p.fetch_status}${p.http_status ? ' ' + p.http_status : ''}]\n${p.text ? p.text : '(no text; not machine-checkable)'}`
     ).join('\n\n');
     return {
       content: [{ type: 'text', text: `Validation assigned:\nOrg: ${result.org?.name}\nRound: ${result.round_id}\nYour validation claim ID (submit against this one): ${result.claim_id}\n\n---\n\n${validateMethodology}\n\n--- SOURCE REPORTS ---\n\n${reports}\n\n--- CACHED PAGE TEXT (use ONLY this; do not fetch) ---\n\n${pages}` }],
@@ -236,7 +236,7 @@ server.tool('get_next_validation', 'Get your assigned v3 validation: both resear
   }
 });
 
-server.tool('submit_validation', 'Submit a validation: corrected ("validated") versions of the source reports. You may only SUBTRACT unsupported/fabricated EVIDENCE TABLE rows or CORRECT a quote to match its cited page — never ADD new evidence. Provide full corrected markdown for each report you changed; omit reports you left unchanged.', {
+server.tool('submit_validation', 'Submit a validation: corrected ("validated") versions of the source reports. You may only SUBTRACT unsupported/fabricated EVIDENCE TABLE rows or CORRECT a quote to match its cited page; never ADD new evidence. Provide full corrected markdown for each report you changed; omit reports you left unchanged.', {
   claim_id: z.string().describe('Your validation claim_id from get_next_validation'),
   validated_reports: z.array(z.object({
     claim_id: z.string().describe('A source report\'s claim_id'),
@@ -290,14 +290,14 @@ server.tool('list_agents', 'List your agents (concurrent workers). Each has its 
   }
 });
 
-server.tool('create_agent', 'Create a new agent (a separate concurrent worker) and get its API key — so you can run another harness at the same time (e.g. a local Qwen alongside Codex). Returns the key ONCE. Subject to your agent limit (default 2).', {
+server.tool('create_agent', 'Create a new agent (a separate concurrent worker) and get its API key; so you can run another harness at the same time (e.g. a local Qwen alongside Codex). Returns the key ONCE. Subject to your agent limit (default 2).', {
   label: z.string().describe('A name for the new worker, e.g. "qwen-local".'),
   prefer_low_fetch_roles: z.boolean().optional().describe('true if this agent runs a local/cheap model (prefers validation/consolidation).'),
 }, async ({ label, prefer_low_fetch_roles }) => {
   if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
   try {
     const result = await client.createAgent(label, !!prefer_low_fetch_roles);
-    return { content: [{ type: 'text', text: `Created agent "${result.agent.label}" (id ${result.agent.id}).\n\nIts API key (shown once — configure the other harness with it):\n${result.api_key}` }] };
+    return { content: [{ type: 'text', text: `Created agent "${result.agent.label}" (id ${result.agent.id}).\n\nIts API key (shown once; configure the other harness with it):\n${result.api_key}` }] };
   } catch (err) {
     return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
   }
@@ -352,7 +352,7 @@ server.tool('my_impact', 'See your personal contribution stats, tier, and histor
     const result = await client.getImpact();
     const c = result.contributor;
 
-    // Older server builds omit github_handle from the impact response — fall
+    // Older server builds omit github_handle from the impact response; fall
     // back to display_name so we never print "@undefined".
     const who = c.github_handle ? `@${c.github_handle}` : (c.display_name || 'you');
     return {
@@ -367,7 +367,7 @@ server.tool('setup_guide', 'Get setup instructions for Tokens for Good. Use this
   return { content: [{ type: 'text', text: NO_KEY_INSTRUCTIONS }] };
 });
 
-server.tool('setup_automation', 'Get the scheduled-research prompt + setup instructions for the user\'s platform. Usually called by the /tfg-schedule skill (which extracts the prompt and invokes /schedule). Safe to call directly too — returns human-readable instructions.', {
+server.tool('setup_automation', 'Get the scheduled-research prompt + setup instructions for the user\'s platform. Usually called by the /tfg-schedule skill (which extracts the prompt and invokes /schedule). Safe to call directly too; returns human-readable instructions.', {
   frequency: z.enum(['daily', 'weekly']).optional().describe('How often to contribute'),
   runs_per_day: z.number().int().min(1).max(15).optional().describe('For daily cadence: how many research runs per day (1-15). Defaults to 1.'),
 }, async ({ frequency, runs_per_day }) => {
@@ -376,12 +376,12 @@ server.tool('setup_automation', 'Get the scheduled-research prompt + setup instr
   return { content: [{ type: 'text', text: instructions }] };
 });
 
-server.tool('mark_setup_complete', 'Called by the /tfg-schedule skill after /schedule confirms, or by the /tfg skill after a successful first submission. Flips local state so the SessionStart hook stops emitting first-session instructions. Idempotent — safe to call multiple times.', {}, async () => {
+server.tool('mark_setup_complete', 'Called by the /tfg-schedule skill after /schedule confirms, or by the /tfg skill after a successful first submission. Flips local state so the SessionStart hook stops emitting first-session instructions. Idempotent; safe to call multiple times.', {}, async () => {
   markSetupComplete();
 
   // If the user just wired up a recurring schedule, tell the server too. This
   // is what flips `has_schedule`, which lights the "Auto-contributing" badge on
-  // their dashboard — the only product-side confirmation that scheduling worked.
+  // their dashboard; the only product-side confirmation that scheduling worked.
   // Best-effort: the badge is non-critical, so a failure here never blocks setup.
   const state = loadState();
   if (client && (state.intended_flow === 'scheduled' || state.auto_schedule)) {
@@ -399,7 +399,7 @@ server.tool('snooze', 'Snooze Tokens for Good reminders. Call this when the user
   days: z.number().int().min(1).max(365).describe('Days to snooze (1 = tomorrow, 7 = next week)'),
 }, async ({ days }) => {
   snoozeDays(days);
-  return { content: [{ type: 'text', text: `Got it — Tokens for Good will stay quiet for ${days} day${days === 1 ? '' : 's'}.` }] };
+  return { content: [{ type: 'text', text: `Got it; Tokens for Good will stay quiet for ${days} day${days === 1 ? '' : 's'}.` }] };
 });
 
 // --- Prompts (session start) ---
@@ -445,7 +445,7 @@ server.prompt('session_start', 'Check if you should research an org', {}, async 
     return {
       messages: [{
         role: 'user',
-        content: { type: 'text', text: `Tokens for Good: Would you like to donate your spare tokens to research a nonprofit today?\n\n1. Set up automatic daily contributions (recommended) — run /tfg-schedule\n2. Just run one now — run /tfg\n3. Ask me tomorrow\n4. Ask me in a week` },
+        content: { type: 'text', text: `Tokens for Good: Would you like to contribute your spare tokens to research a nonprofit today?\n\n1. Set up automatic daily contributions (recommended): run /tfg-schedule\n2. Just run one now: run /tfg\n3. Ask me tomorrow\n4. Ask me in a week` },
       }],
     };
   } else {

@@ -19,7 +19,7 @@ export function runSessionStartHook() {
   // Never-initialized users: hook is a no-op. Setup happens via init, not here.
   if (!state.intended_flow) return;
 
-  // First session after init — emit the handoff instruction exactly once.
+  // First session after init; emit the handoff instruction exactly once.
   if (!state.first_setup_complete) {
     emit(firstSessionMessage(state));
     return;

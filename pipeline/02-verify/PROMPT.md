@@ -12,9 +12,9 @@ Read the full research report. Note every inline citation `[Source Name](URL)` a
 
 For each citation, visit the URL using web fetch and verify:
 
-- **URL loads** — Is it a real page (not 404, not a redirect to a homepage)?
-- **Content matches** — Does the page actually say what the report claims? Quote the relevant passage.
-- **Data is accurate** — Do the numbers match?
+- **URL loads:** Is it a real page (not 404, not a redirect to a homepage)?
+- **Content matches:** Does the page actually say what the report claims? Quote the relevant passage.
+- **Data is accurate:** Do the numbers match?
 
 Record each check:
 
@@ -22,11 +22,11 @@ Record each check:
 |---|----------|-----------|---------------|-------|
 
 Status values:
-- **VALID** — URL loads and content matches
-- **BROKEN** — 404 or page doesn't load
-- **MISMATCH** — URL loads but doesn't support the claim
-- **PARTIAL** — Some claims match, some don't
-- **UNVERIFIABLE** — Paywalled or content not accessible
+- **VALID:** URL loads and content matches
+- **BROKEN:** 404 or page doesn't load
+- **MISMATCH:** URL loads but doesn't support the claim
+- **PARTIAL:** Some claims match, some don't
+- **UNVERIFIABLE:** Paywalled or content not accessible
 
 ### 3. Re-attribute Mismatches
 

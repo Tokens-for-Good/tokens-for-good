@@ -9,7 +9,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8'));
 
 const HELP = `tokens-for-good v${pkg.version}
-Donate your spare AI tokens to research nonprofits for Fierce Philanthropy.
+Contribute your spare AI tokens to research nonprofits for Fierce Philanthropy.
 
 Usage:
   npx tokens-for-good <command> [options]

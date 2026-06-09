@@ -16,9 +16,9 @@ const PKG_ROOT = join(__dirname, '..');
 const IS_WINDOWS = process.platform === 'win32';
 
 const FREQUENCY_CHOICES = [
-  { title: 'Daily  — recommended; pick how many runs per day next',        value: 'daily'   },
-  { title: 'Weekly — light touch',                                         value: 'weekly'  },
-  { title: "One-off — I'll run research manually when I feel like it",     value: 'one_off' },
+  { title: 'Daily (recommended); pick how many runs per day next',        value: 'daily'   },
+  { title: 'Weekly; light touch',                                         value: 'weekly'  },
+  { title: "One-off; I'll run research manually when I feel like it",     value: 'one_off' },
 ];
 
 const PLATFORM_CHOICES = [
@@ -36,7 +36,7 @@ const onCancel = () => {
 };
 
 export async function runInit() {
-  console.log('\n✨ Tokens for Good — one-time setup\n');
+  console.log('\n✨ Tokens for Good; one-time setup\n');
 
   // Idempotency: offer to reconfigure if already set up
   const existing = loadState();
@@ -72,7 +72,7 @@ export async function runInit() {
     initial: detectedIdx,
   }, { onCancel });
 
-  // Step 3: Frequency (mandatory choice — this is the whole point of init)
+  // Step 3: Frequency (mandatory choice; this is the whole point of init)
   const { choice } = await prompts({
     type: 'select',
     name: 'choice',
@@ -81,7 +81,7 @@ export async function runInit() {
     initial: 0,
   }, { onCancel });
 
-  // Step 3b: Daily cadence — how many runs per day. Claude Code caps the
+  // Step 3b: Daily cadence; how many runs per day. Claude Code caps the
   // number of scheduled runs per day, so we ask for a count (1-15).
   let runs_per_day = null;
   if (choice === 'daily') {
@@ -280,13 +280,13 @@ function writeSessionStartHook() {
 }
 
 // Claude Code runs SessionStart hooks with a stripped PATH that often omits
-// the node/npx bin dir — C:\Program Files\nodejs on Windows, or the nvm/
-// homebrew bin when Claude Code is launched from the macOS Dock/Finder — so a
+// the node/npx bin dir; C:\Program Files\nodejs on Windows, or the nvm/
+// homebrew bin when Claude Code is launched from the macOS Dock/Finder; so a
 // bare `npx` lookup fails and the session shows a "hook error". Resolve the
 // absolute npx path at init time (full PATH available) and bake it in.
 //
-// `2>/dev/null || true` makes the hook non-fatal: this is an optional donation
-// tool, so a missing npx, offline registry, or any other hiccup must never
+// `2>/dev/null || true` makes the hook non-fatal: this is an optional
+// contribution tool, so a missing npx, offline registry, or other hiccup must never
 // disrupt the user's session. Hooks run under bash/sh on every platform (Git
 // Bash on Windows), so this syntax is portable.
 function hookCommand() {
@@ -301,7 +301,7 @@ function resolveNpxPath() {
   }
 
   // macOS / Linux: prefer `which npx`, then npx alongside the running node
-  // binary, then a bare `npx` fallback (relies on PATH — last resort).
+  // binary, then a bare `npx` fallback (relies on PATH; last resort).
   try {
     const r = spawnSync('which', ['npx'], { encoding: 'utf-8' });
     if (r.status === 0) {
@@ -321,7 +321,7 @@ function resolveNpxPath() {
 }
 
 function resolveWindowsNpxPath() {
-  // First try `where npx.cmd` — most reliable when PATH is correct.
+  // First try `where npx.cmd`; most reliable when PATH is correct.
   try {
     const r = spawnSync('where', ['npx.cmd'], { encoding: 'utf-8' });
     if (r.status === 0) {
@@ -334,7 +334,7 @@ function resolveWindowsNpxPath() {
   const alongside = join(dirname(process.execPath), 'npx.cmd');
   if (existsSync(alongside)) return alongside;
 
-  // Last-resort guess — user's hook may need manual edit if this is wrong.
+  // Last-resort guess; user's hook may need manual edit if this is wrong.
   return 'C:\\Program Files\\nodejs\\npx.cmd';
 }
 
@@ -361,7 +361,7 @@ function printClosingGuidance(platform, flow, freq, runsPerDay = 1) {
   const cadence = freq === 'daily' && runsPerDay > 1 ? `daily (${runsPerDay}× per day)` : freq;
   if (platform === 'claude-code') {
     if (flow === 'scheduled') {
-      console.log(`Next: open Claude Code and send any message — even "hi".`);
+      console.log(`Next: open Claude Code and send any message; even "hi".`);
       console.log(`On that first message Claude sets up /schedule at ${cadence} cadence and`);
       console.log(`confirms with "Scheduled ✓". Prefer to be explicit? Just run /tfg-schedule.`);
       console.log('');
@@ -369,13 +369,13 @@ function printClosingGuidance(platform, flow, freq, runsPerDay = 1) {
       console.log(`runs setup hooks after your first message, so type something to kick it off.`);
       console.log('');
       console.log('');
-      console.log(`Once it's scheduled, runs happen on Anthropic's cloud — your computer can be`);
+      console.log(`Once it's scheduled, runs happen on Anthropic's cloud; your computer can be`);
       console.log(`off and Claude Code doesn't need to be open. It just runs on its own from here.`);
       console.log('');
       console.log(`Verify it worked: run /schedule in Claude Code to see your recurring task,`);
       console.log(`or check for the "Auto-contributing" badge on your dashboard.`);
     } else {
-      console.log(`Next: open Claude Code and send any message — even "hi" — and Claude will`);
+      console.log(`Next: open Claude Code and send any message; even "hi"; and Claude will`);
       console.log(`offer to research your first org. Prefer to be explicit? Just run /tfg.`);
       console.log('');
       console.log(`Heads up: nothing happens the instant the window opens. Claude Code only`);

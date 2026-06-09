@@ -42,7 +42,7 @@ export class ApiClient {
 
     const response = await fetch(url, options);
     // Tolerate empty bodies (204 No Content, used by /research/consolidate/next
-    // when nothing is assigned to you) — response.json() throws on empty text.
+    // when nothing is assigned to you); response.json() throws on empty text.
     const text = await response.text();
     const data = text ? JSON.parse(text) : null;
 

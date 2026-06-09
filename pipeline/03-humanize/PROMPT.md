@@ -1,4 +1,4 @@
-# Step 3: Humanize — Instructions
+# Step 3: Humanize; Instructions
 
 ## Inputs
 
@@ -23,7 +23,7 @@ The AI decontamination passes below are your checklist.
 Work through these checks in order. For each issue found, fix it and log the change.
 
 #### Pass 1: Em Dash Removal
-- Search for every `—` (em dash) in the content
+- Search for every `, ` (em dash) in the content
 - Replace each with a period (two sentences), comma, or parentheses
 - Two short sentences almost always beat one em-dashed sentence
 - Log count: "Removed X em dashes"
@@ -47,7 +47,7 @@ Work through these checks in order. For each issue found, fix it and log the cha
 
 #### Pass 5: AI Pattern Scan
 Check for and fix:
-- [ ] "[Statement]. Not because X — because Y." dramatic structure
+- [ ] "[Statement]. Not because X; because Y." dramatic structure
 - [ ] "Not just X, but Y" emphasis pattern
 - [ ] "Whether X or Y" parallel constructions
 - [ ] "From X to Y" range statements

@@ -1,6 +1,6 @@
 ---
 name: tfg-schedule
-description: Set up automated Tokens for Good research on a schedule (daily — with a chosen number of runs per day — or weekly). Use this when the user wants their AI to donate spare tokens to nonprofit research without manual prompting — it wires up a recurring /schedule agent in one shot instead of making them run /schedule, pick a schedule, and paste a prompt by hand.
+description: Set up automated Tokens for Good research on a schedule (daily, with a chosen number of runs per day, or weekly). Use this when the user wants their AI to contribute spare tokens to nonprofit research without manual prompting; it wires up a recurring /schedule agent in one shot instead of making them run /schedule, pick a schedule, and paste a prompt by hand.
 ---
 
 The user wants to automate Tokens for Good research on a recurring schedule.
@@ -13,23 +13,23 @@ Work out the cadence before doing anything else:
 - Otherwise ask the user, offering: **Daily** (recommended), **Weekly** (light touch), or **Skip for now**.
 - For a daily cadence with no per-day count set, ask **"How many times per day? (1–15)"**. Claude Code caps how many scheduled runs you get per day, so keep it at 15 or below. Default to 1 if the user has no preference.
 
-Describe cadence by frequency only — keep token costs and dollar amounts out of every question and confirmation.
+Describe cadence by frequency only; keep token costs and dollar amounts out of every question and confirmation.
 
 ## 2. Wire it up
 
 1. **Call the TFG MCP `setup_automation` tool** with `frequency` (`daily` or `weekly`) and, for daily, `runs_per_day`. It returns the full `/schedule` setup text: a Step 2 schedule line containing a cron expression, and a research prompt scoped to the user's API key.
 
-2. **Extract the research prompt** — the block delimited by `---` lines. Pass it through verbatim; don't paraphrase.
+2. **Extract the research prompt:** the block delimited by `---` lines. Pass it through verbatim; don't paraphrase.
 
 3. **Invoke the `/schedule` skill** to create the recurring trigger:
    - Schedule: the cron expression from `setup_automation`'s Step 2 line.
    - Task description: the verbatim block from step 2.
 
-4. **Wait for `/schedule` to confirm success.** If it fails or the user cancels, stop here and tell the user — do NOT call `mark_setup_complete`.
+4. **Wait for `/schedule` to confirm success.** If it fails or the user cancels, stop here and tell the user; do NOT call `mark_setup_complete`.
 
 5. **On success, call the TFG MCP `mark_setup_complete` tool.** This flips the user's local state so the SessionStart hook stops nudging.
 
-6. **Confirm to the user** in one or two sentences, and reassure them it runs unattended, e.g. *"Scheduled ✓ — your spare tokens will research a nonprofit on that cadence from here on. It runs on Anthropic's cloud, so your computer can be off and Claude Code doesn't need to be open. Change it anytime with /schedule."*
+6. **Confirm to the user** in one or two sentences, and reassure them it runs unattended, e.g. *"Scheduled ✓; your spare tokens will research a nonprofit on that cadence from here on. It runs on Anthropic's cloud, so your computer can be off and Claude Code doesn't need to be open. Change it anytime with /schedule."*
 
 ## If something goes wrong
 
@@ -40,6 +40,6 @@ Describe cadence by frequency only — keep token costs and dollar amounts out o
 ## What not to do
 
 - Keep token costs and dollar figures out of every question and confirmation.
-- If the user already picked a cadence at install, don't re-ask it — only ask for the per-day count when it's missing for a daily cadence.
+- If the user already picked a cadence at install, don't re-ask it; only ask for the per-day count when it's missing for a daily cadence.
 - Don't print the raw research prompt to the user; it's verbose and already flows through /schedule.
-- Don't assume the user knows what /schedule is. If they ask, briefly explain: "It's Anthropic's scheduled-task feature — runs your prompt on their cloud on a cron schedule, no need to keep your laptop on."
+- Don't assume the user knows what /schedule is. If they ask, briefly explain: "It's Anthropic's scheduled-task feature; runs your prompt on their cloud on a cron schedule, no need to keep your laptop on."

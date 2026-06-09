@@ -32,8 +32,8 @@ export function getSchedulePrompt(apiKey) {
 API Base: ${base}
 Your API key: ${apiKey}
 
-## Calling the API — read first
-Use the **Bash tool with \`curl\`** for every authenticated ${base}/* call (next-action, claim, submit, consolidate). **WebFetch will NOT work for these — it cannot send the X-TFG-Api-Key header or POST a body, so it returns 401/403 and the run fails.** Always include \`-H "X-TFG-Api-Key: ${apiKey}"\`. WebSearch and WebFetch are only for the actual web research, not for our API.
+## Calling the API; read first
+Use the **Bash tool with \`curl\`** for every authenticated ${base}/* call (next-action, claim, submit, consolidate). **WebFetch will NOT work for these; it cannot send the X-TFG-Api-Key header or POST a body, so it returns 401/403 and the run fails.** Always include \`-H "X-TFG-Api-Key: ${apiKey}"\`. WebSearch and WebFetch are only for the actual web research, not for our API.
 
 ## Instructions
 1. Fetch the batch flow (public): \`curl -s "${base}/research/schedule-instructions"\`
@@ -89,7 +89,7 @@ Devin runs in the cloud, fully autonomous.`;
     case 'qwen-code':
       return `Set up automated contributions on Qwen Code.
 
-Qwen Code v0.14+ has experimental built-in cron — enable it with QWEN_CODE_ENABLE_CRON=1 (or "experimental.cron": true in ~/.qwen/settings.json) and then use the Cron tool / /loop skill.
+Qwen Code v0.14+ has experimental built-in cron; enable it with QWEN_CODE_ENABLE_CRON=1 (or "experimental.cron": true in ~/.qwen/settings.json) and then use the Cron tool / /loop skill.
 
 For a portable option, use a system cron job (add via crontab -e):
 ${cron} cd /path/to/workspace && qwen --prompt "Research a nonprofit org for Fierce Philanthropy using the tokens-for-good MCP tools. Claim an org, research it, then submit the report."

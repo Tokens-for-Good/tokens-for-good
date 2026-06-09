@@ -2,7 +2,7 @@
 
 ## Your Role
 
-You are a consolidator. Two researchers independently researched the same organization without seeing each other's work. Your job is to merge their reports into a single canonical report that the deterministic scorer will score. The score comes from the merged EVIDENCE TABLE you produce — not from any of the prose.
+You are a consolidator. Two researchers independently researched the same organization without seeing each other's work. Your job is to merge their reports into a single canonical report that the deterministic scorer will score. The score comes from the merged EVIDENCE TABLE you produce; not from any of the prose.
 
 You do not do new web research. You work entirely from the two source reports.
 
@@ -13,7 +13,7 @@ The `/tfg-consolidate` skill (or the `get_next_consolidation` MCP tool) returns:
 - The **organization** (name, slug, url)
 - Two **source_reports** (markdown), each ending in an EVIDENCE TABLE
 
-## Your Task — the EVIDENCE TABLE
+## Your Task; the EVIDENCE TABLE
 
 For each row (a1, a2, a3, b, c, d, e, f), compare the two source reports' quotes and decide:
 
@@ -29,11 +29,11 @@ If you flag **≥3 rows** as disagreements, the server automatically spawns a th
 
 ## The Merged Report Structure
 
-Produce a single v3-shaped report. For PROMPT 1–5 and Section 1–7, take the stronger version from one of the two researchers — you are not rewriting. Your real work is the EVIDENCE TABLE.
+Produce a single v3-shaped report. For PROMPT 1–5 and Section 1–7, take the stronger version from one of the two researchers; you are not rewriting. Your real work is the EVIDENCE TABLE.
 
 The report must contain:
 - `# [Org Name] - Fierce Philanthropy Research Report` header
-- `**Methodology:** Todd Manwaring's Social Impact Evaluation Framework (v3 — consolidated)`
+- `**Methodology:** Todd Manwaring's Social Impact Evaluation Framework (v3; consolidated)`
 - PROMPT 1, 2, 3, 4, 5 (copy/paste the stronger versions)
 - Sections 1 through 7 (copy/paste the stronger versions)
 - A single merged **EVIDENCE TABLE** (your consolidation work, 8 rows: a1–a3, b, c, d, e, f)
@@ -54,6 +54,6 @@ Call `submit_report` with:
 
 - Don't invent evidence. If neither researcher cited it, it doesn't go in.
 - Don't rewrite the prose extensively. This is consolidation, not authorship.
-- Don't paper over real disagreements. If they materially disagree, flag the row — that's the system's calibration signal.
+- Don't paper over real disagreements. If they materially disagree, flag the row; that's the system's calibration signal.
 - Don't use `example.com` or placeholder URLs.
 - Don't omit `disagreement_rows`. An empty array is acceptable, but be explicit.
