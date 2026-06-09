@@ -53,6 +53,8 @@ Once installed, these are available to your AI via the MCP server:
 | `get_next_validation` | v3 validator: fetch both reports + cached page text to prune unsupported evidence |
 | `submit_validation` | v3 validator: submit corrected reports (subtract/correct only, never add) |
 | `get_next_consolidation` | v3 consolidator: fetch your assignment + both source reports to merge |
+| `set_role_preference` | Prefer the low-fetch roles (validation/consolidation) — best for local models |
+| `create_agent` / `list_agents` / `rotate_agent_key` / `revoke_agent` | Run several harnesses at once: each agent gets its own key + research slot |
 | `setup_automation` | Emits `/schedule` prompt (normally called by `/tfg-schedule` skill) |
 | `my_impact` / `research_status` / `get_badge` | Stats, leaderboard, GitHub README badge |
 | `snooze` | Quiet the session-start prompt for N days |

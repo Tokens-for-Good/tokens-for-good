@@ -95,6 +95,31 @@ export class ApiClient {
     return this.request('GET', '/research/validate/next');
   }
 
+  async setRolePreference(preferLowFetchRoles) {
+    return this.request('POST', '/research/agent/preferences', {
+      prefer_low_fetch_roles: !!preferLowFetchRoles,
+    });
+  }
+
+  async listAgents() {
+    return this.request('GET', '/research/agents');
+  }
+
+  async createAgent(label, preferLowFetchRoles = false) {
+    return this.request('POST', '/research/agents', {
+      label,
+      prefer_low_fetch_roles: !!preferLowFetchRoles,
+    });
+  }
+
+  async rotateAgentKey(agentId) {
+    return this.request('POST', '/research/agents/rotate', { agent_id: agentId });
+  }
+
+  async revokeAgent(agentId) {
+    return this.request('POST', '/research/agents/revoke', { agent_id: agentId });
+  }
+
   async submitValidation(claimId, validatedReports, validationNotes = null, tokenUsage = null) {
     const normalizedTokenUsage = typeof tokenUsage === 'number'
       ? { total_tokens: tokenUsage }

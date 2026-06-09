@@ -265,6 +265,68 @@ server.tool('submit_validation', 'Submit a validation: corrected ("validated") v
   }
 });
 
+server.tool('set_role_preference', 'Set whether THIS agent prefers the low-fetch roles (validation & consolidation). Turn it on for a local/cheap model: the agent gets those no-scrape assignments first and waits instead of auto-starting an expensive research run when none is queued.', {
+  prefer_low_fetch_roles: z.boolean().describe('true = prefer validation/consolidation (best for local models); false = also do fresh research.'),
+}, async ({ prefer_low_fetch_roles }) => {
+  if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
+  try {
+    const result = await client.setRolePreference(prefer_low_fetch_roles);
+    return { content: [{ type: 'text', text: `Agent "${result.agent}" now ${result.prefers_low_fetch_roles ? 'PREFERS validation/consolidation (skips auto-research)' : 'does fresh research too'}.` }] };
+  } catch (err) {
+    return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
+  }
+});
+
+server.tool('list_agents', 'List your agents (concurrent workers). Each has its own key + role preference; the one you call as is is_current. Also returns your agent_limit.', {}, async () => {
+  if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
+  try {
+    const result = await client.listAgents();
+    const lines = (result.agents || []).map((a) =>
+      `- [${a.id}] ${a.label}${a.is_current ? ' (this one)' : ''}${a.prefers_low_fetch_roles ? ' · low-fetch' : ''}${a.last_used_at ? ` · last used ${a.last_used_at}` : ''}`
+    ).join('\n');
+    return { content: [{ type: 'text', text: `Agents (limit ${result.agent_limit}):\n${lines}` }] };
+  } catch (err) {
+    return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
+  }
+});
+
+server.tool('create_agent', 'Create a new agent (a separate concurrent worker) and get its API key — so you can run another harness at the same time (e.g. a local Qwen alongside Codex). Returns the key ONCE. Subject to your agent limit (default 2).', {
+  label: z.string().describe('A name for the new worker, e.g. "qwen-local".'),
+  prefer_low_fetch_roles: z.boolean().optional().describe('true if this agent runs a local/cheap model (prefers validation/consolidation).'),
+}, async ({ label, prefer_low_fetch_roles }) => {
+  if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
+  try {
+    const result = await client.createAgent(label, !!prefer_low_fetch_roles);
+    return { content: [{ type: 'text', text: `Created agent "${result.agent.label}" (id ${result.agent.id}).\n\nIts API key (shown once — configure the other harness with it):\n${result.api_key}` }] };
+  } catch (err) {
+    return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
+  }
+});
+
+server.tool('rotate_agent_key', 'Rotate one of your agents\' API keys (get the id from list_agents). The old key stops working immediately; reconfigure that harness with the new key. Use if a key leaked.', {
+  agent_id: z.number().describe('The id of the agent to rotate (from list_agents).'),
+}, async ({ agent_id }) => {
+  if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
+  try {
+    const result = await client.rotateAgentKey(agent_id);
+    return { content: [{ type: 'text', text: `Rotated key for agent "${result.label}". New key (shown once):\n${result.api_key}` }] };
+  } catch (err) {
+    return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
+  }
+});
+
+server.tool('revoke_agent', 'Permanently revoke one of your agents (get the id from list_agents). Its key stops working and the slot frees up. You cannot revoke your only agent.', {
+  agent_id: z.number().describe('The id of the agent to revoke (from list_agents).'),
+}, async ({ agent_id }) => {
+  if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
+  try {
+    await client.revokeAgent(agent_id);
+    return { content: [{ type: 'text', text: `Revoked agent ${agent_id}.` }] };
+  } catch (err) {
+    return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
+  }
+});
+
 server.tool('research_status', 'See the overall Tokens for Good project progress and leaderboard.', {}, async () => {
   try {
     const clientForStatus = client || new ApiClient('dummy', { version: PKG_VERSION, platform, installId }); // Status is public

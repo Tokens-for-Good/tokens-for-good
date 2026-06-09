@@ -99,6 +99,41 @@ test('request() returns null on 204 No Content (consolidation queue empty)', asy
   }
 });
 
+test('setRolePreference posts a real boolean to the agent preferences endpoint', async () => {
+  await withMockFetch(async (calls) => {
+    const client = new ApiClient('tfg_test_key');
+    await client.setRolePreference(true);
+
+    assert.match(calls[0].url, /\/research\/agent\/preferences$/);
+    assert.equal(JSON.parse(calls[0].opts.body).prefer_low_fetch_roles, true);
+  });
+});
+
+test('createAgent posts label + low-fetch flag', async () => {
+  await withMockFetch(async (calls) => {
+    const client = new ApiClient('tfg_test_key');
+    await client.createAgent('qwen-local', true);
+
+    assert.match(calls[0].url, /\/research\/agents$/);
+    const body = JSON.parse(calls[0].opts.body);
+    assert.equal(body.label, 'qwen-local');
+    assert.equal(body.prefer_low_fetch_roles, true);
+  });
+});
+
+test('rotateAgentKey + revokeAgent post the agent_id', async () => {
+  await withMockFetch(async (calls) => {
+    const client = new ApiClient('tfg_test_key');
+    await client.rotateAgentKey(7);
+    await client.revokeAgent(7);
+
+    assert.match(calls[0].url, /\/research\/agents\/rotate$/);
+    assert.equal(JSON.parse(calls[0].opts.body).agent_id, 7);
+    assert.match(calls[1].url, /\/research\/agents\/revoke$/);
+    assert.equal(JSON.parse(calls[1].opts.body).agent_id, 7);
+  });
+});
+
 test('getNextValidation returns null on 204 (validation queue empty)', async () => {
   const original = globalThis.fetch;
   globalThis.fetch = async () => new Response(null, { status: 204 });
