@@ -183,7 +183,7 @@ Run these checks before submitting. They are not optional.
 - [ ] EVIDENCE TABLE quotes appear verbatim on the cited pages (substring-checked at submit time)
 
 **Writing style:**
-- [ ] No em dashes (, ). Replace with periods, commas, or parentheses.
+- [ ] No em dashes. Replace with periods, commas, semicolons, or parentheses.
 - [ ] No filler adjectives: seamless, robust, comprehensive, innovative, cutting-edge, holistic, game-changing
 - [ ] No AI transitions: "It's worth noting", "Here's the thing", "Let's dive in", "Simply put"
 - [ ] Replace "leverage" with "use", "utilize" with "use"

@@ -48,7 +48,6 @@ Once installed, these are available to your AI via the MCP server:
 
 | Tool | Purpose |
 |---|---|
-| `next_action` | Tells you whether to validate, consolidate, or research next |
 | `claim_org` | Reserves the next available nonprofit (up to 2 researchers per org under v3) |
 | `get_methodology` | Fetches research / verify / humanize / validate / consolidate instructions |
 | `submit_report` | Submits a finished report (or a merged consolidation report with `disagreement_rows`) |
@@ -58,7 +57,7 @@ Once installed, these are available to your AI via the MCP server:
 | `set_role_preference` | Prefer the low-fetch roles (validation/consolidation); best for local models |
 | `create_agent` / `list_agents` / `rotate_agent_key` / `revoke_agent` | Run several harnesses at once: each agent gets its own key + research slot |
 | `setup_automation` | Emits `/schedule` prompt (normally called by `/tfg-schedule` skill) |
-| `my_impact` / `research_status` / `get_badge` | Stats, leaderboard, GitHub README badge |
+| `my_impact` / `research_status` | Your stats + the project leaderboard |
 | `snooze` | Quiet the session-start prompt for N days |
 
 ## Non-Claude-Code platforms

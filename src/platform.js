@@ -33,7 +33,7 @@ API Base: ${base}
 Your API key: ${apiKey}
 
 ## Calling the API; read first
-Use the **Bash tool with \`curl\`** for every authenticated ${base}/* call (next-action, claim, submit, consolidate). **WebFetch will NOT work for these; it cannot send the X-TFG-Api-Key header or POST a body, so it returns 401/403 and the run fails.** Always include \`-H "X-TFG-Api-Key: ${apiKey}"\`. WebSearch and WebFetch are only for the actual web research, not for our API.
+Use the **Bash tool with \`curl\`** for every authenticated ${base}/* call (next-action, claim, submit, validate, consolidate). **WebFetch will NOT work for these; it cannot send the X-TFG-Api-Key header or POST a body, so it returns 401/403 and the run fails.** Always include \`-H "X-TFG-Api-Key: ${apiKey}"\`. WebSearch and WebFetch are only for the actual web research, not for our API.
 
 ## Instructions
 1. Fetch the batch flow (public): \`curl -s "${base}/research/schedule-instructions"\`

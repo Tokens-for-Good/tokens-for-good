@@ -112,7 +112,7 @@ server.tool('claim_org', 'Claim the next available nonprofit org to research.', 
   try {
     const result = await client.claimOrg(plat || platform);
     return {
-      content: [{ type: 'text', text: `Claimed: ${result.org.name} (${result.org.url})\nclaim_id: ${result.claim_id}\nexpires: ${result.expires_at}\nNext: get_methodology step="research", then submit_report.` }],
+      content: [{ type: 'text', text: `Claimed: ${result.org.name} (${result.org.url})\nclaim_id: ${result.claim_id}\nexpires: ${result.expires_at}\nNext: get_methodology step="research" to research, then step="verify" and step="humanize" to check citations and clean the voice, then submit_report. (The /tfg skill walks all four.)` }],
     };
   } catch (err) {
     // 409 means you already have an active claim; usually an auto-assigned
