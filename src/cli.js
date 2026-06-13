@@ -50,19 +50,18 @@ if (args.includes('-v') || args.includes('--version')) {
   try {
     const client = new ApiClient(process.env.TFG_API_KEY || 'public', { version: pkg.version, installId: getOrCreateInstallId() });
     const status = await client.getStatus();
-    const sys = status.system_stats || status;
     console.log('\nTokens for Good - Project Status\n');
-    console.log(`Total orgs: ${sys.total_organizations ?? status.total_orgs ?? 'n/a'}`);
-    console.log(`Pending research: ${sys.pending_organizations ?? status.pending_orgs ?? 'n/a'}`);
-    console.log(`Active contributors (7d): ${sys.active_contributors_7_days ?? status.active_contributors_7d ?? 'n/a'}`);
+    console.log(`Total orgs: ${status.total_orgs ?? 'n/a'}`);
+    console.log(`Pending research: ${status.pending_orgs ?? 'n/a'}`);
+    console.log(`Active contributors (7d): ${status.active_contributors_7d ?? 'n/a'}`);
     console.log('\nQueue:');
-    for (const [k, v] of Object.entries(status.queue_status || status.queue || {})) {
+    for (const [k, v] of Object.entries(status.queue || {})) {
       console.log(`  ${k}: ${v}`);
     }
     console.log('\nTop Contributors:');
     (status.top_contributors || []).forEach((c, i) => {
-      const name = c.display_name || (c.github_handle ? '@' + c.github_handle : 'anonymous');
-      console.log(`  ${c.rank ?? i + 1}. ${name} (${c.total_organizations ?? c.total_orgs} orgs, ${c.tier})`);
+      const name = c.display_name || 'anonymous';
+      console.log(`  ${i + 1}. ${name} (${c.total_orgs} orgs, ${c.tier})`);
     });
   } catch (err) {
     console.error('Error:', err.message);

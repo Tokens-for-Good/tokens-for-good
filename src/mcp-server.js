@@ -331,14 +331,13 @@ server.tool('research_status', 'See the overall Tokens for Good project progress
   try {
     const clientForStatus = client || new ApiClient('dummy', { version: PKG_VERSION, platform, installId }); // Status is public
     const result = await clientForStatus.getStatus();
-    const sys = result.system_stats || result;
-    const queue = result.queue_status || result.queue || {};
+    const queue = result.queue || {};
     const topList = result.top_contributors?.map((c, i) =>
-      `${c.rank ?? i + 1}. ${c.display_name || (c.github_handle ? '@' + c.github_handle : 'anonymous')} (${c.total_organizations ?? c.total_orgs} orgs, ${c.tier})`
+      `${i + 1}. ${c.display_name || 'anonymous'} (${c.total_orgs} orgs, ${c.tier})`
     ).join('\n') || 'No contributors yet';
 
     return {
-      content: [{ type: 'text', text: `Tokens for Good Progress:\n\nTotal orgs: ${sys.total_organizations ?? result.total_orgs}\nPending research: ${sys.pending_organizations ?? result.pending_orgs}\nActive contributors (7d): ${sys.active_contributors_7_days ?? result.active_contributors_7d}\n\nQueue:\n${Object.entries(queue).map(([k, v]) => `  ${k}: ${v}`).join('\n')}\n\nTop Contributors:\n${topList}` }],
+      content: [{ type: 'text', text: `Tokens for Good Progress:\n\nTotal orgs: ${result.total_orgs}\nPending research: ${result.pending_orgs}\nActive contributors (7d): ${result.active_contributors_7d}\n\nQueue:\n${Object.entries(queue).map(([k, v]) => `  ${k}: ${v}`).join('\n')}\n\nTop Contributors:\n${topList}` }],
     };
   } catch (err) {
     return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
