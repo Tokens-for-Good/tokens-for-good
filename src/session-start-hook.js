@@ -11,7 +11,9 @@
 // Required output shape for SessionStart hooks:
 //   { "hookSpecificOutput": { "hookEventName": "SessionStart", "additionalContext": "<text>" } }
 // Plain stdout is ignored by Claude Code, which is why this needs JSON.
-import { loadState, isSnoozed } from './state.js';
+import { loadState, isSnoozed, updateState } from './state.js';
+
+const UPGRADE_NUDGE_INTERVAL_DAYS = 14;
 
 export function runSessionStartHook() {
   const state = loadState();
@@ -25,9 +27,31 @@ export function runSessionStartHook() {
     return;
   }
 
-  // Steady state: optionally nudge if user is on one-off flow and hasn't
-  // contributed in a while. Respects snooze.
+  // Steady state nudges below all respect snooze.
   if (isSnoozed()) return;
+
+  // Legacy-routine upgrade: scheduled users whose routine predates the
+  // embedded-methodology prompt (no schedule_prompt_version recorded) still
+  // have a curl-loader routine that fetches its instructions at runtime —
+  // the thing that trips agent-harness security warnings. Nudge them to
+  // re-run /tfg-schedule, which rewrites the routine in place; that call
+  // records the new prompt version and this nudge goes silent.
+  const hasSchedule = state.auto_schedule || state.intended_flow === 'scheduled';
+  if (hasSchedule && !state.schedule_prompt_version) {
+    const lastNudge = state.last_upgrade_nudge ? new Date(state.last_upgrade_nudge) : null;
+    const daysSinceNudge = lastNudge ? Math.floor((Date.now() - lastNudge.getTime()) / 86_400_000) : Infinity;
+    if (daysSinceNudge >= UPGRADE_NUDGE_INTERVAL_DAYS) {
+      updateState({ last_upgrade_nudge: new Date().toISOString() });
+      emit(
+        'Tokens for Good: The user has a TFG research routine created before the embedded-methodology update. ' +
+        'The old routine fetches its instructions from the TFG API at runtime, which can trigger a prompt-injection ' +
+        'security warning on scheduled runs; the new format embeds the full methodology in the routine itself. ' +
+        'Offer to upgrade it now by invoking the /tfg-schedule skill (it updates the existing routine in place, ' +
+        'keeping their cadence). If they decline, they can snooze TFG reminders.'
+      );
+      return;
+    }
+  }
   if (state.intended_flow === 'one_off' && !state.auto_schedule) {
     const last = state.last_contributed ? new Date(state.last_contributed) : null;
     const daysSince = last ? Math.floor((Date.now() - last.getTime()) / 86_400_000) : Infinity;

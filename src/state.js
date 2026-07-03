@@ -19,6 +19,8 @@ const DEFAULT_STATE = {
   first_setup_complete: false,  // flipped by mark_setup_complete tool after first scheduled run or first one-off submit
   installed_at: null,           // ISO timestamp when init finished
   install_id: null,             // stable per-machine UUID sent as X-TFG-Install-Id header
+  schedule_prompt_version: null, // e.g. 'v3.0-embed' — stamp of the routine prompt installed via /tfg-schedule; null = pre-embed (legacy) routine or no routine
+  last_upgrade_nudge: null,     // ISO timestamp of the last legacy-routine upgrade nudge
 };
 
 export function loadState() {
@@ -79,6 +81,13 @@ export function markContributed() {
 
 export function markSetupComplete() {
   updateState({ first_setup_complete: true });
+}
+
+// Called when /tfg-schedule installs (or re-installs) a routine, so the
+// SessionStart hook can tell an embedded-prompt routine from a legacy
+// curl-loader one and stop nudging after the upgrade.
+export function recordSchedulePromptVersion(version) {
+  updateState({ schedule_prompt_version: version });
 }
 
 

@@ -4,14 +4,14 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { ApiClient } from './api-client.js';
 import { detectPlatform, isSchedulable, getAutomationInstructions } from './platform.js';
-import { loadState, updateState, isSnoozed, snoozeDays, hasContributedToday, markContributed, markSetupComplete, getOrCreateInstallId } from './state.js';
+import { loadState, updateState, isSnoozed, snoozeDays, hasContributedToday, markContributed, markSetupComplete, recordSchedulePromptVersion, getOrCreateInstallId } from './state.js';
+import { readMethodology, METHODOLOGY_VERSION, SCHEDULE_PROMPT_VERSION } from './methodology.js';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { homedir } from 'os';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PIPELINE_DIR = join(__dirname, '..', 'pipeline');
 const PKG_VERSION = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8')).version;
 const STATE_FILE = join(homedir(), '.tokens-for-good', 'state.json');
 
@@ -132,20 +132,11 @@ server.tool('claim_org', 'Claim the next available nonprofit org to research.', 
 server.tool('get_methodology', 'Get the full instructions for a pipeline step: research (the v3 EVIDENCE TABLE flow), verify, humanize, validate (prune unsupported evidence from two reports using cached page text), or consolidate (the v3 dual-research merge step).', {
   step: z.enum(['research', 'verify', 'humanize', 'validate', 'consolidate']).describe('Which pipeline step to get instructions for'),
 }, async ({ step }) => {
-  const stepMap = {
-    'research': '01-research/PROMPT.md',
-    'verify': '02-verify/PROMPT.md',
-    'humanize': '03-humanize/PROMPT.md',
-    'validate': '04-validate/PROMPT.md',
-    'consolidate': '05-consolidate/PROMPT.md',
-  };
-
-  try {
-    const content = readFileSync(join(PIPELINE_DIR, stepMap[step]), 'utf-8');
-    return { content: [{ type: 'text', text: content }] };
-  } catch {
+  const content = readMethodology(step);
+  if (content === null) {
     return { content: [{ type: 'text', text: `Error: Could not load ${step} methodology file.` }] };
   }
+  return { content: [{ type: 'text', text: content }] };
 });
 
 server.tool('submit_report', 'Submit a completed research report (or a consolidated v3 report) for a claim you own. You MUST include estimated_tokens. For consolidation claims, also pass disagreement_rows.', {
@@ -159,7 +150,7 @@ server.tool('submit_report', 'Submit a completed research report (or a consolida
   if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
 
   try {
-    const result = await client.submitReport(claim_id, report_markdown, estimated_tokens, null, model_used, prompt_version, disagreement_rows);
+    const result = await client.submitReport(claim_id, report_markdown, estimated_tokens, null, model_used, prompt_version ?? `v${METHODOLOGY_VERSION}`, disagreement_rows);
     markContributed();
 
     // One-off users: first successful submit completes their initial setup,
@@ -185,12 +176,8 @@ server.tool('get_next_consolidation', 'Get your assigned v3 consolidation: the o
     if (!result || !result.claim_id) {
       return { content: [{ type: 'text', text: 'No consolidations assigned to you right now.' }] };
     }
-    let consolidateMethodology = '';
-    try {
-      consolidateMethodology = readFileSync(join(PIPELINE_DIR, '05-consolidate/PROMPT.md'), 'utf-8');
-    } catch {
-      consolidateMethodology = 'Merge the two source EVIDENCE TABLEs into one (take the stronger row from each; flag genuine disagreements). Submit with disagreement_rows.';
-    }
+    const consolidateMethodology = readMethodology('consolidate')
+      ?? 'Merge the two source EVIDENCE TABLEs into one (take the stronger row from each; flag genuine disagreements). Submit with disagreement_rows.';
     const reports = (result.source_reports || []).map((r, i) =>
       `### Source report ${i + 1} (submitted ${r.submitted_at || 'unknown'})\n\n${r.report_markdown}`
     ).join('\n\n---\n\n');
@@ -213,12 +200,8 @@ server.tool('get_next_validation', 'Get your assigned v3 validation: both resear
     if (!result || !result.claim_id) {
       return { content: [{ type: 'text', text: 'No validations assigned to you right now.' }] };
     }
-    let validateMethodology = '';
-    try {
-      validateMethodology = readFileSync(join(PIPELINE_DIR, '04-validate/PROMPT.md'), 'utf-8');
-    } catch {
-      validateMethodology = 'Using ONLY the cached page text provided, remove EVIDENCE TABLE rows whose quote is not on its cited page (verdict "fabricated"), and correct quotes that do not match. You may only SUBTRACT or CORRECT-to-source, never ADD. Submit the corrected reports with submit_validation.';
-    }
+    const validateMethodology = readMethodology('validate')
+      ?? 'Using ONLY the cached page text provided, remove EVIDENCE TABLE rows whose quote is not on its cited page (verdict "fabricated"), and correct quotes that do not match. You may only SUBTRACT or CORRECT-to-source, never ADD. Submit the corrected reports with submit_validation.';
     const reports = (result.source_reports || []).map((r, i) =>
       `### Source report ${i + 1}; claim_id ${r.claim_id} (submitted ${r.submitted_at || 'unknown'})\n\nServer citation verdicts: ${JSON.stringify(r.citation_verdicts || {})}\n\n${r.report_markdown}`
     ).join('\n\n---\n\n');
@@ -375,15 +358,29 @@ server.tool('setup_automation', 'Get the scheduled-research prompt + setup instr
   return { content: [{ type: 'text', text: instructions }] };
 });
 
-server.tool('mark_setup_complete', 'Called by the /tfg-schedule skill after /schedule confirms, or by the /tfg skill after a successful first submission. Flips local state so the SessionStart hook stops emitting first-session instructions. Idempotent; safe to call multiple times.', {}, async () => {
+server.tool('mark_setup_complete', 'Called by the /tfg-schedule skill after /schedule confirms (pass installed_schedule: true), or by the /tfg skill after a successful first submission. Flips local state so the SessionStart hook stops emitting first-session instructions. Idempotent; safe to call multiple times.', {
+  installed_schedule: z.boolean().optional().describe('Pass true when a recurring /schedule routine was just created or updated — records the installed prompt version and lights the dashboard badge.'),
+}, async ({ installed_schedule }) => {
   markSetupComplete();
+
+  const state = loadState();
+  const scheduled = installed_schedule || state.intended_flow === 'scheduled' || state.auto_schedule;
+
+  if (scheduled) {
+    // The routine minted by this package version embeds the methodology, so
+    // record its stamp; the SessionStart hook uses it to stop (or start)
+    // nudging legacy-routine users to upgrade via /tfg-schedule.
+    recordSchedulePromptVersion(SCHEDULE_PROMPT_VERSION);
+    if (installed_schedule && !state.auto_schedule) {
+      updateState({ auto_schedule: true });
+    }
+  }
 
   // If the user just wired up a recurring schedule, tell the server too. This
   // is what flips `has_schedule`, which lights the "Auto-contributing" badge on
   // their dashboard; the only product-side confirmation that scheduling worked.
   // Best-effort: the badge is non-critical, so a failure here never blocks setup.
-  const state = loadState();
-  if (client && (state.intended_flow === 'scheduled' || state.auto_schedule)) {
+  if (client && scheduled) {
     try {
       await client.enableSchedule();
     } catch {

@@ -17,19 +17,19 @@ Describe cadence by frequency only; keep token costs and dollar amounts out of e
 
 ## 2. Wire it up
 
-1. **Call the TFG MCP `setup_automation` tool** with `frequency` (`daily` or `weekly`) and, for daily, `runs_per_day`. It returns the full `/schedule` setup text: a Step 2 schedule line containing a cron expression, and a research prompt scoped to the user's API key.
+1. **Call the TFG MCP `setup_automation` tool** with `frequency` (`daily` or `weekly`) and, for daily, `runs_per_day`. It returns the full `/schedule` setup text: a Step 2 schedule line containing a cron expression, and a self-contained research prompt (methodology embedded) scoped to the user's API key.
 
-2. **Extract the research prompt:** the block delimited by `---` lines. Pass it through verbatim; don't paraphrase.
+2. **Extract the research prompt:** the block delimited by `---` lines. Pass it through verbatim; don't paraphrase or trim it — the embedded methodology sections are the point.
 
-3. **Invoke the `/schedule` skill** to create the recurring trigger:
-   - Schedule: the cron expression from `setup_automation`'s Step 2 line.
+3. **Check for an existing TFG routine, then invoke the `/schedule` skill.** If the user already has a Tokens for Good routine (they're upgrading, or one shows up when listing scheduled tasks), UPDATE that routine in place — replace its task prompt with the new verbatim block and keep its existing cadence unless the user asked to change it. Only create a new routine when none exists. Never leave two TFG routines running.
+   - Schedule: the cron expression from `setup_automation`'s Step 2 line (or the existing routine's cadence when upgrading).
    - Task description: the verbatim block from step 2.
 
 4. **Wait for `/schedule` to confirm success.** If it fails or the user cancels, stop here and tell the user; do NOT call `mark_setup_complete`.
 
-5. **On success, call the TFG MCP `mark_setup_complete` tool.** This flips the user's local state so the SessionStart hook stops nudging.
+5. **On success, call the TFG MCP `mark_setup_complete` tool with `installed_schedule: true`.** This flips the user's local state so the SessionStart hook stops nudging, and records the installed prompt version so upgrade reminders go silent.
 
-6. **Confirm to the user** in one or two sentences, and reassure them it runs unattended, e.g. *"Scheduled ✓; your spare tokens will research a nonprofit on that cadence from here on. It runs on Anthropic's cloud, so your computer can be off and Claude Code doesn't need to be open. Change it anytime with /schedule."*
+6. **Confirm to the user** in one or two sentences, and reassure them it runs unattended, e.g. *"Scheduled ✓; your spare tokens will research a nonprofit on that cadence from here on. It runs on Anthropic's cloud, so your computer can be off and Claude Code doesn't need to be open. Change it anytime with /schedule."* When this was an upgrade of an existing routine, also mention the payoff: the routine no longer fetches instructions from the TFG API at runtime, so scheduled runs stop tripping the prompt-injection security warning.
 
 ## If something goes wrong
 
