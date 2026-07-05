@@ -60,7 +60,7 @@ export class ApiClient {
     return this.request('POST', '/research/claim', { platform });
   }
 
-  async submitReport(claimId, reportMarkdown, tokenUsage = null, metrics = null, modelUsed = null, promptVersion = null, disagreementRows = null) {
+  async submitReport(claimId, reportMarkdown, tokenUsage = null, metrics = null, modelUsed = null, promptVersion = null, disagreementRows = null, noEvidence = false) {
     // The MCP tool surface accepts `estimated_tokens` as a plain number, but
     // the API validates `token_usage` as `nullable|array` and reads
     // `token_usage.total_tokens` for leaderboard accounting. Wrap a bare
@@ -77,6 +77,7 @@ export class ApiClient {
       model_used: modelUsed,
       prompt_version: promptVersion,
       disagreement_rows: disagreementRows,
+      no_evidence: noEvidence || undefined,
     });
   }
 

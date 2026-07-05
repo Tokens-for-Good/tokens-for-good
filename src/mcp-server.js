@@ -145,12 +145,13 @@ server.tool('submit_report', 'Submit a completed research report (or a consolida
   estimated_tokens: z.number().describe('Estimated total tokens used: count web searches (~1K each), web fetches (~2-5K each), report output (~4 tokens/word), plus ~10K overhead'),
   model_used: z.string().optional().describe('The model that generated this report'),
   prompt_version: z.string().optional().describe('Methodology version: "v3" for the EVIDENCE TABLE flow (default), "v2" for the legacy scorecard flow.'),
+  no_evidence: z.boolean().optional().describe('Set true ONLY when thorough research found no qualifying evidence for ANY row (EVIDENCE TABLE fully blank). Records an honest insufficient-evidence finding and retires the org from the queue. Never invent evidence to avoid this.'),
   disagreement_rows: z.array(z.enum(['a1', 'a2', 'a3', 'b', 'c', 'd', 'e', 'f'])).optional().describe('Consolidation-only: EVIDENCE TABLE row keys where the two researchers materially disagreed. >=3 auto-triggers a 3rd researcher.'),
-}, async ({ claim_id, report_markdown, estimated_tokens, model_used, prompt_version, disagreement_rows }) => {
+}, async ({ claim_id, report_markdown, estimated_tokens, model_used, prompt_version, no_evidence, disagreement_rows }) => {
   if (!client) return { content: [{ type: 'text', text: 'Error: TFG_API_KEY not set.' }] };
 
   try {
-    const result = await client.submitReport(claim_id, report_markdown, estimated_tokens, null, model_used, prompt_version ?? `v${METHODOLOGY_VERSION}`, disagreement_rows);
+    const result = await client.submitReport(claim_id, report_markdown, estimated_tokens, null, model_used, prompt_version ?? `v${METHODOLOGY_VERSION}`, disagreement_rows, no_evidence ?? false);
     markContributed();
 
     // One-off users: first successful submit completes their initial setup,

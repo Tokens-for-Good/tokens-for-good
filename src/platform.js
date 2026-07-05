@@ -103,6 +103,8 @@ Say: "Submitting report." Then \`curl\` POST ${base}/research/submit with body {
 
 If the response is a 422 with \`lint_errors\`, your claim is STILL ACTIVE — this is not a failure. Fix the flagged EVIDENCE TABLE rows (usually: a counterfactual row e/f quoting a result instead of the study design, or an adaptation row d quoting tenure instead of a change) and curl submit again with the corrected report.
 
+If thorough research found NO qualifying evidence for ANY row (common for for-profit companies or orgs with no published outcome data), never invent evidence: submit the same full-length report with every table row blank plus \`"no_evidence": true\` in the body. That records an honest insufficient-evidence finding and retires the org from the queue.
+
 Estimate tokens honestly: web searches (~1K each), web fetches (~2–5K each), report output (~4 tokens/word), plus ~10K overhead.
 
 ### 5. Stop

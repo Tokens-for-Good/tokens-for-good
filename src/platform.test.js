@@ -33,6 +33,12 @@ test('schedule prompt stamps the embedded prompt version on submits', () => {
   assert.ok(prompt.includes(`methodology v${METHODOLOGY_VERSION}`));
 });
 
+test('schedule prompt documents the honest no-evidence path', () => {
+  const prompt = getSchedulePrompt('tfg_live_test');
+  assert.ok(prompt.includes('"no_evidence": true'));
+  assert.ok(prompt.includes('never invent evidence'));
+});
+
 test('schedule prompt carries the API key and curl guidance', () => {
   const prompt = getSchedulePrompt('tfg_live_KEY123');
   assert.ok(prompt.includes('tfg_live_KEY123'));

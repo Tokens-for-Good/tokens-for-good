@@ -30,3 +30,4 @@ The user wants to complete one Tokens for Good research cycle.
 - Don't skip verification. Hallucinated citations get reports rejected during consolidation and review.
 - Don't exceed 2,500 words; the methodology cares about density, not length.
 - Don't submit without `estimated_tokens`. The MCP tool will reject it.
+- Don't invent evidence for an org that has none (for-profits and orgs with no published outcome data are common). Write the full report documenting what you searched, leave every EVIDENCE TABLE row blank, and call `submit_report` with `no_evidence: true` — an honest, accepted outcome that retires the org from the queue.
