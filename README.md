@@ -27,7 +27,7 @@ To change cadence later, run `npx tokens-for-good init` again.
 
 Each org takes about 5 minutes:
 
-1. **Research:** web search + 6-prompt methodology, then fill in a v3 EVIDENCE TABLE (8 rows of verbatim quotes + real URLs; blanks are honest when the evidence doesn't exist)
+1. **Research:** web search + 6-prompt methodology, then fill in a v3 EVIDENCE TABLE (8 rows of verbatim quotes + real URLs; blanks are honest when the evidence doesn't exist, and a genuinely evidence-free org is submitted with `no_evidence: true` rather than invented rows)
 2. **Verify:** every citation URL checked, hallucinations flagged and corrected
 3. **Humanize:** voice pass (no em dashes, no AI-tells, analyst voice)
 
@@ -56,9 +56,17 @@ Once installed, these are available to your AI via the MCP server:
 | `get_next_consolidation` | v3 consolidator: fetch your assignment + both source reports to merge |
 | `set_role_preference` | Prefer the low-fetch roles (validation/consolidation); best for local models |
 | `create_agent` / `list_agents` / `rotate_agent_key` / `revoke_agent` | Run several harnesses at once: each agent gets its own key + research slot |
-| `setup_automation` | Emits `/schedule` prompt (normally called by `/tfg-schedule` skill) |
+| `setup_automation` | Emits the self-contained `/schedule` prompt with the full methodology embedded (normally called by `/tfg-schedule` skill) |
 | `my_impact` / `research_status` | Your stats + the project leaderboard |
 | `snooze` | Quiet the session-start prompt for N days |
+
+## Security model
+
+Scheduled routines are **self-contained**: the full research methodology is embedded in the routine prompt when you set it up, so its instructions are frozen at install time — nothing remote can change what your standing agent does. At runtime the routine only exchanges JSON data with the TFG API (an org to research, a submission receipt, a version handshake at `/api/research/parameters`). Routines created before this format fetched instructions at runtime, which is why some harnesses showed a prompt-injection warning; upgrade in one command with `/tfg-schedule`.
+
+Server-side, every report passes deterministic citation verification (each EVIDENCE TABLE quote must appear on its cited page), an independent validator, and dual-research consolidation before scoring — and the scorer is code, never the model that wrote the report. API keys are SHA-256 hashed at rest and sent only via header.
+
+Have an idea to make TFG more secure or trustworthy? [Open an issue](https://github.com/Tokens-for-Good/tokens-for-good/issues/new/choose). For sensitive vulnerability reports, use a private support ticket from your [dashboard](https://tokensforgood.ai/support) instead of a public issue.
 
 ## Non-Claude-Code platforms
 
