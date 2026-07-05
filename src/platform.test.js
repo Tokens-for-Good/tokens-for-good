@@ -22,6 +22,7 @@ test('schedule prompt contains no runtime instruction fetches', () => {
   assert.ok(!prompt.includes('/research/schedule-instructions'), 'no schedule-instructions fetch');
   assert.ok(!prompt.includes('/research/methodology'), 'no methodology fetch');
   assert.ok(prompt.includes('/research/parameters'), 'version handshake is the only extra call');
+  assert.ok(prompt.includes('report_max_words'), 'fetched limits are applied as data');
 });
 
 test('schedule prompt stamps the embedded prompt version on submits', () => {

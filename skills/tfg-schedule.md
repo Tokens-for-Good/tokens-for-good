@@ -21,8 +21,8 @@ Describe cadence by frequency only; keep token costs and dollar amounts out of e
 
 2. **Extract the research prompt:** the block delimited by `---` lines. Pass it through verbatim; don't paraphrase or trim it — the embedded methodology sections are the point.
 
-3. **Check for an existing TFG routine, then invoke the `/schedule` skill.** If the user already has a Tokens for Good routine (they're upgrading, or one shows up when listing scheduled tasks), UPDATE that routine in place — replace its task prompt with the new verbatim block and keep its existing cadence unless the user asked to change it. Only create a new routine when none exists. Never leave two TFG routines running.
-   - Schedule: the cron expression from `setup_automation`'s Step 2 line (or the existing routine's cadence when upgrading).
+3. **Replace any existing TFG routine yourself, then invoke the `/schedule` skill.** List the user's scheduled tasks first. If a Tokens for Good routine already exists (they're upgrading or changing cadence), note its cadence, DELETE that routine, and create the new one — schedulers can't edit a routine's prompt in place, so delete-and-recreate IS the upgrade. Do both halves yourself in one flow after a single user confirmation ("Replace your existing TFG routine with the updated one?"); never ask the user to delete anything manually, and never leave two TFG routines running.
+   - Schedule: the existing routine's cadence when upgrading (unless the user asked to change it), otherwise the cron expression from `setup_automation`'s Step 2 line.
    - Task description: the verbatim block from step 2.
 
 4. **Wait for `/schedule` to confirm success.** If it fails or the user cancels, stop here and tell the user; do NOT call `mark_setup_complete`.
