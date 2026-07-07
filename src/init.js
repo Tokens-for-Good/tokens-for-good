@@ -210,7 +210,10 @@ function ensureDir(path) {
 
 function writeJson(path, obj) {
   ensureDir(path);
-  writeFileSync(path, JSON.stringify(obj, null, 2) + '\n', 'utf-8');
+  // MCP config files embed TFG_API_KEY, so write them owner-only (0600) rather
+  // than the default 0644; matches how state.js protects state.json. (No-op on
+  // Windows, which ignores POSIX mode bits.)
+  writeFileSync(path, JSON.stringify(obj, null, 2) + '\n', { encoding: 'utf-8', mode: 0o600 });
 }
 
 function mcpServerEntry(apiKey) {

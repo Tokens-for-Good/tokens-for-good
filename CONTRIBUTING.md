@@ -1,6 +1,6 @@
 # Contributing to Tokens for Good
 
-Thanks for looking. TFG is a small npm package (MCP server + CLI + a couple of Claude Code skills) that turns spare AI subscription tokens into nonprofit research for Fierce Philanthropy. The current 0.4.x line was built and tested on **Claude Code only**. Making it genuinely pleasant on other harnesses — OpenCode, Cursor, Windsurf, Devin, and anything else with MCP support — is the single biggest way external contributors can help.
+Thanks for looking. TFG is a small npm package (MCP server + CLI + a couple of Claude Code skills) that turns spare AI subscription tokens into nonprofit research for Fierce Philanthropy. The current 0.5.x line was built and tested on **Claude Code only**. Making it genuinely pleasant on other harnesses — OpenCode, Cursor, Windsurf, Devin, and anything else with MCP support — is the single biggest way external contributors can help.
 
 This doc covers how the package fits together, what a harness port actually touches, the testing pattern, and how to ship a change. If you're adding a new harness, skim [Project Structure](#project-structure) and [Touch Points When Porting](#touch-points-when-porting-to-a-new-harness) first.
 
@@ -145,7 +145,7 @@ When porting, be honest in `getAutomationInstructions()` about what's possible o
 
 ## Testing
 
-The repo has no formal test framework yet — tests are run as inline scripts against scratch `HOME` directories so local state isn't touched. An example pattern (this is how 0.4.x was verified):
+Unit tests run under the Node built-in test runner (`npm test` runs `node --test src/**/*.test.js`). Some end-to-end checks are also run as inline scripts against scratch `HOME` directories so local state isn't touched. An example of that pattern:
 
 ```js
 import { spawnSync } from 'child_process';

@@ -55,6 +55,15 @@ curl -s -X POST -H "X-TFG-Api-Key: ${apiKey}" -H "Content-Type: application/json
 \`\`\`
 WebSearch and WebFetch are the right tools for the actual web research; they just can't carry the auth header for our API.
 
+**Submitting a report, validation, or consolidation (any POST whose body contains report_markdown):** never inline the report text into a \`-d '...'\` string. Report and page text contains apostrophes and shell metacharacters that break single-quoted shell escaping and can corrupt or, on an unattended run, hijack the command. Instead, write the JSON body to a file with the **Write tool** and send it with \`curl -d @file\`:
+\`\`\`
+# 1. Write the JSON body to /tmp/tfg-body.json (or ./tfg-body.json on Windows) with the Write tool.
+# 2. POST the file — the report text never touches the shell:
+curl -s -X POST -H "X-TFG-Api-Key: ${apiKey}" -H "Content-Type: application/json" \\
+  -d @/tmp/tfg-body.json "${base}/research/submit"
+\`\`\`
+Short bodies with no free text (claim, next-action) can still use inline \`-d '{...}'\`.
+
 You're running as a scheduled agent. The stream idles out if you're silent too long between tool calls, so narrate every step in one short sentence before each tool call, and do exactly ONE unit of work per run. If anything fails twice, stop and surrender the run rather than retrying.
 
 ## The run
@@ -78,14 +87,14 @@ Say: "Checking next action." Then \`curl\` GET ${base}/research/next-action
 Say: "Picking up a validation." Then:
 - \`curl\` GET ${base}/research/validate/next — returns your validation claim_id, both reports, the server's citation verdicts, and the cached text of every cited page.
 - Follow the VALIDATE METHODOLOGY below. Using ONLY the cached page text, remove EVIDENCE TABLE rows whose quote isn't on its page (subtract/correct-only — never add). If both reports are already clean, submit an empty list.
-- \`curl\` POST ${base}/research/validate/submit with body {"claim_id": <validation_id>, "validated_reports": [{"claim_id": <source_id>, "report_markdown": "CORRECTED REPORT"}, ...], "validation_notes": "what you changed", "token_usage": {"total_tokens": ESTIMATE}}.
+- POST ${base}/research/validate/submit with body {"claim_id": <validation_id>, "validated_reports": [{"claim_id": <source_id>, "report_markdown": "CORRECTED REPORT"}, ...], "validation_notes": "what you changed", "token_usage": {"total_tokens": ESTIMATE}}. This body contains report_markdown, so write it to a file and \`curl -d @file\` as described above.
 - End the session here.
 
 **1c. Consolidation (only if told to):**
 Say: "Picking up a consolidation." Then:
 - \`curl\` GET ${base}/research/consolidate/next — returns your consolidation claim_id, the org, and both source reports inlined.
 - Follow the CONSOLIDATE METHODOLOGY below. Produce a single merged report with one consolidated EVIDENCE TABLE. Don't do fresh research; pick the stronger quote per row from the two sources.
-- \`curl\` POST ${base}/research/submit with body {"claim_id": <consolidation_id>, "report_markdown": "MERGED REPORT", "model_used": "scheduled-consolidator", "prompt_version": "${SCHEDULE_PROMPT_VERSION}", "token_usage": {"total_tokens": ESTIMATE}, "disagreement_rows": ["a1", ...] (rows where the two researchers materially disagreed; pass [] if none)}.
+- POST ${base}/research/submit with body {"claim_id": <consolidation_id>, "report_markdown": "MERGED REPORT", "model_used": "scheduled-consolidator", "prompt_version": "${SCHEDULE_PROMPT_VERSION}", "token_usage": {"total_tokens": ESTIMATE}, "disagreement_rows": ["a1", ...] (rows where the two researchers materially disagreed; pass [] if none)}. This body contains report_markdown, so write it to a file and \`curl -d @file\` as described above.
 - End the session here. Do not continue to step 2.
 
 ### 2. Claim one org
@@ -99,7 +108,7 @@ Say: "Claiming an org." Then \`curl\` POST ${base}/research/claim with body {"pl
 Follow the RESEARCH METHODOLOGY below using **WebSearch and WebFetch** for the actual web research. Before each search or fetch, say one short sentence about what you're doing ("Searching for <term>", "Fetching <url>"). Keep narration brief but constant — this is what keeps the stream from idling out. After drafting, run the VERIFY METHODOLOGY (check every citation URL), then the HUMANIZE METHODOLOGY (final voice pass).
 
 ### 4. Submit the report
-Say: "Submitting report." Then \`curl\` POST ${base}/research/submit with body {"claim_id": ID, "report_markdown": "FULL REPORT", "model_used": "scheduled", "prompt_version": "${SCHEDULE_PROMPT_VERSION}", "token_usage": {"total_tokens": ESTIMATE}}.
+Say: "Submitting report." Then POST ${base}/research/submit with body {"claim_id": ID, "report_markdown": "FULL REPORT", "model_used": "scheduled", "prompt_version": "${SCHEDULE_PROMPT_VERSION}", "token_usage": {"total_tokens": ESTIMATE}}. This body contains report_markdown, so write it to a file and \`curl -d @file\` as described above (do not inline the report into \`-d '...'\`).
 
 If the response is a 422 with \`lint_errors\`, your claim is STILL ACTIVE — this is not a failure. Fix the flagged EVIDENCE TABLE rows (usually: a counterfactual row e/f quoting a result instead of the study design, or an adaptation row d quoting tenure instead of a change) and curl submit again with the corrected report.
 
