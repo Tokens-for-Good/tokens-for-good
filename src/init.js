@@ -348,9 +348,9 @@ export function mergeWebPermissions(settings) {
     if (listsTool(cfg.permissions.allow, tool)) {
       skipped.push({ tool, reason: 'already allowed' });
     } else if (listsTool(denied, tool)) {
-      skipped.push({ tool, reason: 'you have it denied' });
+      skipped.push({ tool, reason: 'a deny rule of yours covers it' });
     } else if (listsTool(asked, tool)) {
-      skipped.push({ tool, reason: 'you have it set to ask' });
+      skipped.push({ tool, reason: 'an ask rule of yours covers it' });
     } else {
       cfg.permissions.allow.push(tool);
       added.push(tool);

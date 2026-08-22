@@ -54,7 +54,7 @@ test('a denied tool is skipped rather than written into allow', () => {
 
   assert.deepEqual(added, ['WebSearch']);
   assert.deepEqual(settings.permissions.allow, ['WebSearch']);
-  assert.deepEqual(skipped, [{ tool: 'WebFetch', reason: 'you have it denied' }]);
+  assert.deepEqual(skipped, [{ tool: 'WebFetch', reason: 'a deny rule of yours covers it' }]);
 });
 
 test('a tool set to ask is skipped for the same reason', () => {
@@ -63,7 +63,7 @@ test('a tool set to ask is skipped for the same reason', () => {
   });
 
   assert.deepEqual(added, ['WebFetch']);
-  assert.deepEqual(skipped, [{ tool: 'WebSearch', reason: 'you have it set to ask' }]);
+  assert.deepEqual(skipped, [{ tool: 'WebSearch', reason: 'an ask rule of yours covers it' }]);
 });
 
 test('a malformed permissions block is repaired rather than crashing init', () => {
