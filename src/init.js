@@ -99,9 +99,34 @@ export async function runInit() {
   const intended_flow = choice === 'one_off' ? 'one_off' : 'scheduled';
   const intended_frequency = choice === 'one_off' ? null : choice;
 
+  // Step 3c: standing permission for the two web tools. Only Claude Code reads
+  // ~/.claude/settings.json; other harnesses manage permissions their own way.
+  // Asked as its own question rather than folded into the write confirmation,
+  // because it widens what the agent may do outside Tokens for Good.
+  let allowWebTools = false;
+  if (platform === 'claude-code') {
+    console.log('\nResearch means reading nonprofit websites and searching the web. Without');
+    console.log('standing permission your agent stops to ask on every fetch and every search,');
+    console.log('which stalls an unattended run.');
+    console.log('');
+    console.log('Adding WebFetch and WebSearch to permissions.allow in ~/.claude/settings.json');
+    console.log('lets your agent fetch ANY url and run any web search without asking you first,');
+    console.log('in every project, not only Tokens for Good. Our server-side SSRF hardening');
+    console.log('covers what our servers fetch, not what your agent fetches, so it does not');
+    console.log('protect you here. You can undo this anytime with /permissions in Claude Code.');
+    console.log('');
+    const { allow } = await prompts({
+      type: 'confirm',
+      name: 'allow',
+      message: 'Add WebFetch and WebSearch to your Claude Code allowlist?',
+      initial: true,
+    }, { onCancel });
+    allowWebTools = allow;
+  }
+
   // Step 4: Preview + confirm
   console.log('\nAbout to write:');
-  const plans = planWrites(platform);
+  const plans = planWrites(platform, allowWebTools);
   for (const p of plans) console.log(`  • ${p.label}`);
   console.log('');
 
@@ -120,7 +145,14 @@ export async function runInit() {
 
   if (platform === 'claude-code') {
     writeSessionStartHook();
-    console.log(`✓ ${plans[1].label}`);
+    if (allowWebTools) {
+      const { added, skipped } = writePermissionsAllowlist();
+      console.log(`✓ ${plans[1].label}`);
+      if (added.length) console.log(`    added to permissions.allow: ${added.join(', ')}`);
+      for (const s of skipped) console.log(`    left as you had it: ${s.tool} (${s.reason})`);
+    } else {
+      console.log(`✓ ${plans[1].label}`);
+    }
     writeSkillFile('tfg-schedule');
     console.log(`✓ ${plans[2].label}`);
     writeSkillFile('tfg');
@@ -153,15 +185,19 @@ export async function runInit() {
 
   // Closing message
   console.log('\n✓ Setup complete.\n');
-  printClosingGuidance(platform, intended_flow, intended_frequency, runs_per_day);
+  printClosingGuidance(platform, intended_flow, intended_frequency, runs_per_day, allowWebTools);
 }
 
 // --- Planning (for preview + execute) ---
 
-function planWrites(platform) {
+function planWrites(platform, allowWebTools = false) {
   const plans = [{ label: `${mcpConfigPath(platform)}  (MCP server entry)` }];
   if (platform === 'claude-code') {
-    plans.push({ label: `${settingsPath()}  (SessionStart hook)` });
+    plans.push({
+      label: allowWebTools
+        ? `${settingsPath()}  (SessionStart hook + WebFetch/WebSearch allowlist)`
+        : `${settingsPath()}  (SessionStart hook)`,
+    });
     plans.push({ label: `${skillPath('tfg-schedule')}  (/tfg-schedule skill)` });
     plans.push({ label: `${skillPath('tfg')}  (/tfg skill)` });
     plans.push({ label: `${skillPath('tfg-consolidate')}  (/tfg-consolidate skill)` });
@@ -282,6 +318,61 @@ function writeSessionStartHook() {
   writeJson(abs, cfg);
 }
 
+// The two tools a research run cannot work without. Anything narrower still
+// leaves an unattended run stopping to ask on every page it reads.
+export const WEB_TOOLS = ['WebFetch', 'WebSearch'];
+
+/**
+ * Merge the web tools into `permissions.allow`, reporting what changed. Pure
+ * (takes and returns the settings object) so it is testable without touching a
+ * real settings file.
+ *
+ * Idempotent in both directions: a tool already listed, bare or scoped as
+ * `WebFetch(domain:example.org)`, is left exactly as the user wrote it rather
+ * than broadened, so re-running init never quietly widens a deliberate
+ * narrowing. A tool the user denied or set to ask is skipped too: deny and ask
+ * both beat allow in Claude Code, so writing it would be a silent no-op that
+ * looked like it worked.
+ */
+export function mergeWebPermissions(settings) {
+  const cfg = settings ?? {};
+  cfg.permissions ??= {};
+  if (!Array.isArray(cfg.permissions.allow)) cfg.permissions.allow = [];
+
+  const denied = Array.isArray(cfg.permissions.deny) ? cfg.permissions.deny : [];
+  const asked = Array.isArray(cfg.permissions.ask) ? cfg.permissions.ask : [];
+
+  const added = [];
+  const skipped = [];
+  for (const tool of WEB_TOOLS) {
+    if (listsTool(cfg.permissions.allow, tool)) {
+      skipped.push({ tool, reason: 'already allowed' });
+    } else if (listsTool(denied, tool)) {
+      skipped.push({ tool, reason: 'a deny rule of yours covers it' });
+    } else if (listsTool(asked, tool)) {
+      skipped.push({ tool, reason: 'an ask rule of yours covers it' });
+    } else {
+      cfg.permissions.allow.push(tool);
+      added.push(tool);
+    }
+  }
+
+  return { settings: cfg, added, skipped };
+}
+
+function listsTool(entries, tool) {
+  return entries.some(e => typeof e === 'string' && (e === tool || e.startsWith(`${tool}(`)));
+}
+
+// Same file and same read/merge/write shape as the SessionStart hook writer,
+// so the two stay consistent about JSON handling and file mode.
+function writePermissionsAllowlist() {
+  const abs = join(homedir(), '.claude', 'settings.json');
+  const { settings, added, skipped } = mergeWebPermissions(readJsonOrEmpty(abs));
+  if (added.length) writeJson(abs, settings);
+  return { added, skipped };
+}
+
 // Claude Code runs SessionStart hooks with a stripped PATH that often omits
 // the node/npx bin dir; C:\Program Files\nodejs on Windows, or the nvm/
 // homebrew bin when Claude Code is launched from the macOS Dock/Finder; so a
@@ -360,7 +451,7 @@ function writeQwenCommand(name) {
 
 // --- Closing guidance ---
 
-function printClosingGuidance(platform, flow, freq, runsPerDay = 1) {
+function printClosingGuidance(platform, flow, freq, runsPerDay = 1, allowWebTools = false) {
   const cadence = freq === 'daily' && runsPerDay > 1 ? `daily (${runsPerDay}× per day)` : freq;
   if (platform === 'claude-code') {
     if (flow === 'scheduled') {
@@ -383,6 +474,11 @@ function printClosingGuidance(platform, flow, freq, runsPerDay = 1) {
       console.log('');
       console.log(`Heads up: nothing happens the instant the window opens. Claude Code only`);
       console.log(`runs setup hooks after your first message, so type something to kick it off.`);
+    }
+    if (!allowWebTools) {
+      console.log('');
+      console.log('You skipped the web-tool allowlist, so expect an approval prompt on every');
+      console.log('fetch and every search. Add WebFetch and WebSearch later with /permissions.');
     }
     console.log('\nChange this anytime with `npx tokens-for-good init`.\n');
     return;
