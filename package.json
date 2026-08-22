@@ -20,7 +20,8 @@
     "!src/**/*.test.js",
     "pipeline/",
     "skills/",
-    "LICENSE"
+    "LICENSE",
+    "SECURITY.md"
   ],
   "scripts": {
     "start": "node src/mcp-server.js",

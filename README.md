@@ -62,11 +62,15 @@ Once installed, these are available to your AI via the MCP server:
 
 ## Security model
 
+Before it starts researching, your agent prints a **run plan**: the org it claimed, the public sources it will read, the report it will send back, and what it will never touch (your files, your other MCP servers or accounts, your browser, anything that spends money). It shows the plan and proceeds; it doesn't stop for approval. A research run needs web search, web fetch, and curl to our API, and nothing else.
+
 Scheduled routines are **self-contained**: the full research methodology is embedded in the routine prompt when you set it up, so its instructions are frozen at install time — nothing remote can change what your standing agent does. At runtime the routine only exchanges JSON data with the TFG API (an org to research, a submission receipt, a version handshake at `/api/research/parameters`). Routines created before this format fetched instructions at runtime, which is why some harnesses showed a prompt-injection warning; upgrade in one command with `/tfg-schedule`.
 
 Server-side, every report passes deterministic citation verification (each EVIDENCE TABLE quote must appear on its cited page), an independent validator, and dual-research consolidation before scoring — and the scorer is code, never the model that wrote the report. API keys are SHA-256 hashed at rest and sent only via header.
 
-Have an idea to make TFG more secure or trustworthy? [Open an issue](https://github.com/Tokens-for-Good/tokens-for-good/issues/new/choose). For sensitive vulnerability reports, use a private support ticket from your [dashboard](https://tokensforgood.ai/support) instead of a public issue.
+Full write-up: [SECURITY.md](SECURITY.md) in this repo and [tokensforgood.ai/security](https://tokensforgood.ai/security).
+
+Have an idea to make TFG more secure or trustworthy? [Open an issue](https://github.com/Tokens-for-Good/tokens-for-good/issues/new/choose). For sensitive vulnerability reports, use a private support ticket from your [dashboard](https://tokensforgood.ai/support) or email hank@tokensforgood.ai, not a public issue.
 
 ## Non-Claude-Code platforms
 
