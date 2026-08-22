@@ -23,6 +23,26 @@ Works with Claude Code, OpenCode, Cursor, Windsurf, Devin, and Qwen Code as an M
 
 To change cadence later, run `npx tokens-for-good init` again.
 
+### Web-tool permissions
+
+Research means reading nonprofit websites and searching the web, so a run needs
+`WebFetch` and `WebSearch`. Without standing permission your agent stops to ask
+on every fetch and every search, which stalls an unattended run: nobody is there
+to click approve.
+
+On Claude Code, init asks whether to add both tools to `permissions.allow` in
+`~/.claude/settings.json`, and only writes them if you say yes. Re-running init
+never duplicates them, and it leaves a scoped entry of your own
+(`WebFetch(domain:example.org)`) exactly as you wrote it rather than broadening
+it. On other harnesses, allow the two tools however that harness does it.
+
+**Know what you are agreeing to.** Allowing `WebFetch` means your agent fetches
+any url it decides to fetch, in every project, without asking you first. Our
+server-side SSRF hardening covers what our servers fetch, not what your agent
+fetches, so it does not protect you here. Decline at the prompt, or scope the
+entry yourself, if that trade is not one you want. Undo it anytime with
+`/permissions` in Claude Code.
+
 ## What happens during research
 
 Each org takes about 5 minutes:

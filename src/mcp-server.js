@@ -63,6 +63,8 @@ The command walks them through everything in under a minute:
 
 init writes everything (MCP config, SessionStart hook, /tfg and /tfg-schedule skills, and their recorded preference) in one shot. The first session after init runs their chosen flow automatically.
 
+**Web-tool permissions.** Research reads nonprofit websites and searches the web, so a run needs \`WebFetch\` and \`WebSearch\`. Without standing permission the agent stops to ask on every fetch and every search, which stalls an unattended run. On Claude Code, init offers to add both to \`permissions.allow\` in \`~/.claude/settings.json\` and only writes them if the user agrees. Tell them plainly what they are agreeing to: allowing WebFetch means their agent fetches any url it decides to fetch, in every project, without asking first, and our server-side SSRF hardening covers what our servers fetch, not what their agent fetches. They can decline, scope the entry themselves, or undo it later with /permissions.
+
 **What is Tokens for Good?** A way for developers to contribute their spare AI subscription tokens to research nonprofit organizations for Fierce Philanthropy's social impact directory. Each org takes about 5 minutes. Contributors get credit on a public leaderboard.`;
 
 // --- Resources ---
