@@ -11,6 +11,8 @@ The user wants to complete one Tokens for Good research cycle.
 
 1. **Call `claim_org`** on the TFG MCP. It reserves an org for you and returns a claim ID.
 
+   The result ends with a **run plan**: what you'll read, what you'll send back, and what you will never touch. Print that block to the user verbatim before your first search, then carry straight on to step 2. Don't ask for approval and don't rewrite it; it's a heads up so the user can see what their agent is doing, especially the first time. The wording lives in the tool result so there's one copy of it.
+
 2. **Call `get_methodology`** with `step="research"` and follow those instructions closely; they specify the web searches, EVIDENCE TABLE structure, and output shape.
 
 3. **Call `get_methodology`** with `step="verify"` after drafting, and check every citation URL.
@@ -27,6 +29,8 @@ The user wants to complete one Tokens for Good research cycle.
 
 ## What not to do
 
+- Don't drive a browser. Read pages with your web fetch and web search tools only: no browser automation, no Chrome extension, no Playwright, no signing in to anything. A research run needs public pages, and users find an agent opening their browser alarming.
+- Don't do anything the run plan says you won't: no touching the user's files or repos beyond what's needed to submit, no other MCP servers or connected accounts, nothing that spends money.
 - Don't skip verification. Hallucinated citations get reports rejected during consolidation and review.
 - Don't exceed 2,500 words; the methodology cares about density, not length.
 - Don't submit without `estimated_tokens`. The MCP tool will reject it.

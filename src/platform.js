@@ -1,5 +1,6 @@
 // Platform detection and automation guidance
 import { readMethodology, METHODOLOGY_VERSION, SCHEDULE_PROMPT_VERSION } from './methodology.js';
+import { runPlan, TOOL_STEERING } from './run-plan.js';
 
 export function detectPlatform() {
   if (process.env.CLAUDE_CODE) return 'claude-code';
@@ -105,7 +106,13 @@ Say: "Claiming an org." Then \`curl\` POST ${base}/research/claim with body {"pl
 - On \`403\` probation error → stop. On \`401\`/\`403\` "API key required" or "Invalid API key" → your curl dropped the \`X-TFG-Api-Key\` header (or you used WebFetch). Re-issue the call with curl and the header; do not fall back to WebFetch.
 
 ### 3. Research the org
-Follow the RESEARCH METHODOLOGY below using **WebSearch and WebFetch** for the actual web research. Before each search or fetch, say one short sentence about what you're doing ("Searching for <term>", "Fetching <url>"). Keep narration brief but constant — this is what keeps the stream from idling out. After drafting, run the VERIFY METHODOLOGY (check every citation URL), then the HUMANIZE METHODOLOGY (final voice pass).
+First, print this run plan with the claimed org filled in, so the run's transcript states up front what it touched. Do not wait for anyone to confirm it; nobody is watching a scheduled run.
+
+${runPlan({ orgName: '<the org you just claimed>' })}
+
+${TOOL_STEERING}
+
+Then follow the RESEARCH METHODOLOGY below using **WebSearch and WebFetch** for the actual web research. Before each search or fetch, say one short sentence about what you're doing ("Searching for <term>", "Fetching <url>"). Keep narration brief but constant — this is what keeps the stream from idling out. After drafting, run the VERIFY METHODOLOGY (check every citation URL), then the HUMANIZE METHODOLOGY (final voice pass).
 
 ### 4. Submit the report
 Say: "Submitting report." Then POST ${base}/research/submit with body {"claim_id": ID, "report_markdown": "FULL REPORT", "model_used": "scheduled", "prompt_version": "${SCHEDULE_PROMPT_VERSION}", "token_usage": {"total_tokens": ESTIMATE}}. This body contains report_markdown, so write it to a file and \`curl -d @file\` as described above (do not inline the report into \`-d '...'\`).

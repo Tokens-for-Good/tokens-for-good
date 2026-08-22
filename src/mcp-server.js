@@ -6,6 +6,7 @@ import { ApiClient } from './api-client.js';
 import { detectPlatform, isSchedulable, getAutomationInstructions } from './platform.js';
 import { loadState, updateState, isSnoozed, snoozeDays, hasContributedToday, markContributed, markSetupComplete, recordSchedulePromptVersion, getOrCreateInstallId } from './state.js';
 import { readMethodology, METHODOLOGY_VERSION, SCHEDULE_PROMPT_VERSION } from './methodology.js';
+import { runPlanForAgent, runPlanPreviewForSetup } from './run-plan.js';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -63,7 +64,11 @@ The command walks them through everything in under a minute:
 
 init writes everything (MCP config, SessionStart hook, /tfg and /tfg-schedule skills, and their recorded preference) in one shot. The first session after init runs their chosen flow automatically.
 
-**What is Tokens for Good?** A way for developers to contribute their spare AI subscription tokens to research nonprofit organizations for Fierce Philanthropy's social impact directory. Each org takes about 5 minutes. Contributors get credit on a public leaderboard.`;
+**What is Tokens for Good?** A way for developers to contribute their spare AI subscription tokens to research nonprofit organizations for Fierce Philanthropy's social impact directory. Each org takes about 5 minutes. Contributors get credit on a public leaderboard.
+
+If they ask what it will actually be allowed to do, show them this:
+
+${runPlanPreviewForSetup()}`;
 
 // --- Resources ---
 
@@ -112,7 +117,7 @@ server.tool('claim_org', 'Claim the next available nonprofit org to research.', 
   try {
     const result = await client.claimOrg(plat || platform);
     return {
-      content: [{ type: 'text', text: `Claimed: ${result.org.name} (${result.org.url})\nclaim_id: ${result.claim_id}\nexpires: ${result.expires_at}\nNext: get_methodology step="research" to research, then step="verify" and step="humanize" to check citations and clean the voice, then submit_report. (The /tfg skill walks all four.)` }],
+      content: [{ type: 'text', text: `Claimed: ${result.org.name} (${result.org.url})\nclaim_id: ${result.claim_id}\nexpires: ${result.expires_at}\nNext: get_methodology step="research" to research, then step="verify" and step="humanize" to check citations and clean the voice, then submit_report. (The /tfg skill walks all four.)\n\n${runPlanForAgent({ orgName: result.org.name, orgUrl: result.org.url })}` }],
     };
   } catch (err) {
     // 409 means you already have an active claim; usually an auto-assigned
@@ -122,7 +127,7 @@ server.tool('claim_org', 'Claim the next available nonprofit org to research.', 
     const existing = err.data?.existing_claim;
     if (err.status === 409 && existing?.org) {
       return {
-        content: [{ type: 'text', text: `You're already assigned: ${existing.org.name} (${existing.org.url})\nclaim_id: ${existing.claim_id}\nNext: get_methodology step="research", then submit_report against that claim_id.` }],
+        content: [{ type: 'text', text: `You're already assigned: ${existing.org.name} (${existing.org.url})\nclaim_id: ${existing.claim_id}\nNext: get_methodology step="research", then submit_report against that claim_id.\n\n${runPlanForAgent({ orgName: existing.org.name, orgUrl: existing.org.url })}` }],
       };
     }
     return { content: [{ type: 'text', text: `Error: ${err.message}` }] };
