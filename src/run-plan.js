@@ -26,7 +26,7 @@ export function runPlan({ orgName = null, orgUrl = null } = {}) {
   return `**Run plan**
 - **Researching:** ${target}
 - **Reads:** that organization's public website plus public sources about it (web search results, annual reports, ProPublica 990 filings, independent evaluations, charity raters). Public pages only.
-- **Sends back:** one research report and an honest token estimate, to the Tokens for Good API. Nothing else leaves this machine.
+- **Sends back:** one research report and an honest token estimate, to the Tokens for Good API. Requests also carry the package version, platform name, and a random install id so we can spot a broken routine. Nothing goes anywhere else.
 - **Never touches:** your files, your repos, your other MCP servers or connected accounts, your browser session, your credentials, or anything that spends money.
 - **Takes:** about 5 minutes.`;
 }

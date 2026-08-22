@@ -112,7 +112,7 @@ ${runPlan({ orgName: '<the org you just claimed>' })}
 
 ${TOOL_STEERING}
 
-Then follow the RESEARCH METHODOLOGY below using **WebSearch and WebFetch** for the actual web research. Before each search or fetch, say one short sentence about what you're doing ("Searching for <term>", "Fetching <url>"). Keep narration brief but constant — this is what keeps the stream from idling out. After drafting, run the VERIFY METHODOLOGY (check every citation URL), then the HUMANIZE METHODOLOGY (final voice pass).
+Then follow the RESEARCH METHODOLOGY below using **WebSearch and WebFetch** for the actual web research. Before each search or fetch, say one short sentence about what you're doing ("Searching for <term>", "Fetching <url>"). Keep narration brief but constant: this is what keeps the stream from idling out. After drafting, run the VERIFY METHODOLOGY (check every citation URL), then the HUMANIZE METHODOLOGY (final voice pass).
 
 ### 4. Submit the report
 Say: "Submitting report." Then POST ${base}/research/submit with body {"claim_id": ID, "report_markdown": "FULL REPORT", "model_used": "scheduled", "prompt_version": "${SCHEDULE_PROMPT_VERSION}", "token_usage": {"total_tokens": ESTIMATE}}. This body contains report_markdown, so write it to a file and \`curl -d @file\` as described above (do not inline the report into \`-d '...'\`).

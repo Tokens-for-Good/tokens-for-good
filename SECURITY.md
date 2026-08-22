@@ -22,7 +22,7 @@ Fixes ship on the latest published version of the `tokens-for-good` npm package.
 Every run reads public pages and sends back one report:
 
 - **Reads:** the claimed organization's public website and public sources about it (search results, annual reports, ProPublica 990 filings, independent evaluations, charity raters).
-- **Sends:** one research report and an honest token estimate, to the Tokens for Good API over HTTPS.
+- **Sends:** one research report and an honest token estimate, to the Tokens for Good API over HTTPS. Requests also carry the package version, platform name, and a random per-install id (so we can spot a broken routine); the server logs those with a hashed IP.
 - **Never touches:** your files, your repos, your other MCP servers or connected accounts, your browser session, your credentials, or anything that spends money.
 - **Tools it needs:** web search, web fetch, and (for scheduled routines) `curl` to our API. Nothing else. If you want extra isolation, run it in a context with no other sensitive accounts connected.
 
