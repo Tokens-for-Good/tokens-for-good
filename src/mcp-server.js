@@ -93,7 +93,7 @@ How it works (v3 dual-research):
 Research pipeline (per org, all done by your AI):
 - Research the org using web search + web fetch, following the v3 EVIDENCE TABLE methodology
 - Fill in an EVIDENCE TABLE (8 rows of verbatim quotes + real URLs); leave blanks honestly when the evidence doesn't exist
-- The server (not you) computes the score deterministically from the merged consolidator output, out of 120
+- The server (not you) computes the score deterministically from the merged consolidator output, out of 100 (five criteria; the counterfactual rows e and f share one criterion, the better rating counts)
 - Real URLs only; placeholder citations (example.com) are auto-rejected
 
 Contributor tiers:

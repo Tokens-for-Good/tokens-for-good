@@ -51,7 +51,7 @@ Each org takes about 5 minutes:
 2. **Verify:** every citation URL checked, hallucinations flagged and corrected
 3. **Humanize:** voice pass (no em dashes, no AI-tells, analyst voice)
 
-Under v3 dual-research, every org is researched by two contributors independently. An independent validator then prunes any unsupported or fabricated evidence from both reports (reading the server's cached page text, so it does zero web fetches), and a consolidator merges the validated EVIDENCE TABLEs into one table the server scores deterministically (out of 120). A human reviewer finalizes it for the directory.
+Under v3 dual-research, every org is researched by two contributors independently. An independent validator then prunes any unsupported or fabricated evidence from both reports (reading the server's cached page text, so it does zero web fetches), and a consolidator merges the validated EVIDENCE TABLEs into one table the server scores deterministically (out of 100; 75 or more is Fierce Certified). A human reviewer finalizes it for the directory.
 
 ## Contributor tiers
 
