@@ -112,6 +112,31 @@ test('when the registry install fails, the running npx tree (with its deps) is c
   assert.ok(lines.some(l => l.includes('ENOTFOUND')), 'the reason is shown');
 });
 
+test('the Claude Code entry targets ~/.claude.json (user scope); Devin keeps ~/.mcp.json', () => {
+  assert.equal(init.absoluteMcpPath('claude-code'), join(HOME, '.claude.json'));
+  assert.equal(init.absoluteMcpPath('devin'), join(HOME, '.mcp.json'));
+});
+
+test('merging into ~/.claude.json replaces only our entry and repairs a malformed mcpServers', () => {
+  const cfg = init.mergeMcpServer({ userID: 'u', mcpServers: { other: { url: 'x' }, 'tokens-for-good': { old: true } } }, { command: 'node' });
+  assert.deepEqual(cfg, { userID: 'u', mcpServers: { other: { url: 'x' }, 'tokens-for-good': { command: 'node' } } });
+  assert.deepEqual(init.mergeMcpServer({ mcpServers: 'oops' }, { command: 'node' }), { mcpServers: { 'tokens-for-good': { command: 'node' } } });
+});
+
+test('the legacy ~/.mcp.json entry is removed; the file is reported empty only when nothing else is in it', () => {
+  const shared = init.removeLegacyEntry({ mcpServers: { 'tokens-for-good': {}, keep: {} } });
+  assert.equal(shared.removed, true);
+  assert.equal(shared.empty, false);
+  assert.deepEqual(shared.cfg, { mcpServers: { keep: {} } });
+
+  const ours = init.removeLegacyEntry({ mcpServers: { 'tokens-for-good': {} } });
+  assert.equal(ours.empty, true);
+
+  const untouched = init.removeLegacyEntry({ mcpServers: { keep: {} } });
+  assert.equal(untouched.removed, false);
+  assert.equal(init.removeLegacyEntry(null).removed, false);
+});
+
 test('a hook entry is recognised in both the old npx form and the new node form', () => {
   const oldForm = { matcher: '', hooks: [{ type: 'command', command: '"C:\\Program Files\\nodejs\\npx.cmd" -y tokens-for-good session-start-hook 2>/dev/null || true' }] };
   const newForm = { matcher: '', hooks: [{ type: 'command', command: init.hookCommand(init.cliPathFor(init.packageRoot())) }] };
@@ -134,6 +159,18 @@ test('init run inside a project that shadows the package writes entries that exe
     hooks: { SessionStart: [{ matcher: '', hooks: [{ type: 'command', command: '"npx.cmd" -y tokens-for-good session-start-hook 2>/dev/null || true' }] }] },
     permissions: { allow: ['Bash(git status)'] },
   }));
+  // Claude Code's own user config, full of unrelated state and another server.
+  writeFileSync(join(HOME, '.claude.json'), JSON.stringify({
+    numStartups: 12, projects: { '/x': { allowedTools: [] } },
+    mcpServers: { other: { type: 'http', url: 'https://example.org/mcp' } },
+  }));
+  // The file earlier versions wrote to, holding our stale entry plus someone else's.
+  writeFileSync(join(HOME, '.mcp.json'), JSON.stringify({
+    mcpServers: {
+      'tokens-for-good': { command: 'cmd', args: ['/c', 'npx', '-y', 'tokens-for-good', '--mcp'], env: { TFG_API_KEY: 'tfg_live_OLD' } },
+      keep: { command: 'keep-me' },
+    },
+  }));
 
   const previousCwd = process.cwd();
   process.chdir(project);
@@ -146,13 +183,22 @@ test('init run inside a project that shadows the package writes entries that exe
     process.chdir(previousCwd);
   }
 
-  const mcp = JSON.parse(readFileSync(join(HOME, '.mcp.json'), 'utf-8'));
-  const entry = mcp.mcpServers['tokens-for-good'];
+  // User scope is the top-level mcpServers key of ~/.claude.json, not ~/.mcp.json.
+  const userCfg = JSON.parse(readFileSync(join(HOME, '.claude.json'), 'utf-8'));
+  const entry = userCfg.mcpServers['tokens-for-good'];
+  assert.equal(entry.type, 'stdio');
   assert.equal(entry.command, process.execPath);
   assert.ok(isAbsolute(entry.args[0]) && existsSync(entry.args[0]));
   assert.ok(!entry.args[0].startsWith(project + sep), `entry must not execute from inside the project: ${entry.args[0]}`);
   assert.ok(!entry.args.includes('tokens-for-good'), 'no bare package name');
   assert.equal(entry.env.TFG_API_KEY, 'tfg_live_TESTKEY');
+  assert.equal(userCfg.numStartups, 12, 'unrelated keys survive');
+  assert.deepEqual(userCfg.projects, { '/x': { allowedTools: [] } });
+  assert.deepEqual(userCfg.mcpServers.other, { type: 'http', url: 'https://example.org/mcp' }, 'other servers survive');
+
+  const legacy = JSON.parse(readFileSync(join(HOME, '.mcp.json'), 'utf-8'));
+  assert.deepEqual(legacy, { mcpServers: { keep: { command: 'keep-me' } } }, 'stale entry migrated out of ~/.mcp.json, other server kept');
+  assert.ok(lines.some(l => l.includes('moved the tokens-for-good entry out of ~/.mcp.json')), lines.join('\n'));
 
   const settings = JSON.parse(readFileSync(join(HOME, '.claude', 'settings.json'), 'utf-8'));
   assert.equal(settings.hooks.SessionStart.length, 1, 'old npx hook replaced, not duplicated');

@@ -27,21 +27,15 @@ node src/cli.js init
 node src/cli.js session-start-hook
 ```
 
-To test in Claude Code against your local checkout instead of the published package, point `~/.mcp.json` at the absolute path:
+To test in Claude Code against your local checkout instead of the published package, run `node src/cli.js init` from the checkout: it writes a user-scope entry (the top-level `mcpServers` key of `~/.claude.json`) that points at the checkout's absolute `src/cli.js`. Or add it by hand with the same scope:
 
-```json
-{
-  "mcpServers": {
-    "tokens-for-good": {
-      "command": "node",
-      "args": ["/absolute/path/to/tokens-for-good/src/mcp-server.js"],
-      "env": { "TFG_API_KEY": "tfg_live_..." }
-    }
-  }
-}
+```bash
+claude mcp add --scope user tokens-for-good -e TFG_API_KEY=tfg_live_... -- node /absolute/path/to/tokens-for-good/src/cli.js --mcp
 ```
 
-Restart Claude Code fully after editing `.mcp.json`.
+`~/.mcp.json` is not a user-scope file: Claude Code finds it by walking up from the project directory and treats it as that project's `.mcp.json`, so it only loads (after an approval prompt) in projects under your home folder. init migrates an entry it finds there.
+
+Restart Claude Code fully after changing the MCP config.
 
 ## Project structure
 

@@ -3,7 +3,7 @@
 // choice and writes MCP config, SessionStart hook, skills, and state.json
 // so the user's next Claude Code session acts on their choice immediately.
 import prompts from 'prompts';
-import { readFileSync, writeFileSync, existsSync, mkdirSync, cpSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, cpSync, unlinkSync } from 'fs';
 import { join, dirname, isAbsolute } from 'path';
 import { homedir } from 'os';
 import { fileURLToPath } from 'url';
@@ -145,8 +145,12 @@ export async function runInit() {
   const written = plans.filter(p => !p.runtime);
 
   const apiKeyTrimmed = apiKey.trim();
-  writeMcpConfig(platform, apiKeyTrimmed, cliPath);
+  const { migratedLegacyEntry } = writeMcpConfig(platform, apiKeyTrimmed, cliPath);
   console.log(`✓ ${written[0].label}`);
+  if (migratedLegacyEntry) {
+    console.log(`    moved the tokens-for-good entry out of ${homeRelative(legacyMcpJsonPath())}: Claude Code read that file as a`);
+    console.log(`    per-project .mcp.json (approval prompt in every project under your home folder, no server elsewhere).`);
+  }
 
   if (platform === 'claude-code') {
     writeSessionStartHook(cliPath);
@@ -200,7 +204,7 @@ function planWrites(platform, allowWebTools = false) {
   if (isEphemeralInstall()) {
     plans.push({ runtime: true, label: `${homeRelative(privatePackageDir())}  (private copy of tokens-for-good@${PKG_VERSION}; the npx cache is temporary)` });
   }
-  plans.push({ label: `${mcpConfigPath(platform)}  (MCP server entry)` });
+  plans.push({ label: `${mcpConfigPath(platform)}  (MCP server entry${platform === 'claude-code' ? ', user scope' : ''})` });
   if (platform === 'claude-code') {
     plans.push({
       label: allowWebTools
@@ -379,11 +383,55 @@ function writeMcpConfig(platform, apiKey, cliPath) {
       command: [entry.command, ...entry.args],
       environment: entry.env,
     };
+  } else if (platform === 'claude-code') {
+    mergeMcpServer(cfg, { type: 'stdio', ...entry });
   } else {
-    cfg.mcpServers ??= {};
-    cfg.mcpServers['tokens-for-good'] = entry;
+    mergeMcpServer(cfg, entry);
   }
   writeJson(abs, cfg);
+
+  const migratedLegacyEntry = platform === 'claude-code' ? migrateLegacyMcpJson() : false;
+  return { migratedLegacyEntry };
+}
+
+// Add or replace our entry, leaving every other key of the file alone. For
+// Claude Code the file is ~/.claude.json, which holds a lot of unrelated state.
+export function mergeMcpServer(cfg, entry) {
+  if (!cfg.mcpServers || typeof cfg.mcpServers !== 'object' || Array.isArray(cfg.mcpServers)) cfg.mcpServers = {};
+  cfg.mcpServers['tokens-for-good'] = entry;
+  return cfg;
+}
+
+// Earlier versions wrote the Claude Code entry to ~/.mcp.json. That is not a
+// user-scope file: Claude Code finds it by walking up from the project and
+// treats it as that project's .mcp.json, so every project under the home
+// folder asked for approval and projects elsewhere never saw the server.
+// User scope is the top-level `mcpServers` key of ~/.claude.json.
+export function removeLegacyEntry(cfg) {
+  if (!cfg?.mcpServers || !('tokens-for-good' in cfg.mcpServers)) return { cfg, removed: false };
+  delete cfg.mcpServers['tokens-for-good'];
+  const empty = Object.keys(cfg.mcpServers).length === 0 && Object.keys(cfg).length === 1;
+  return { cfg, removed: true, empty };
+}
+
+function migrateLegacyMcpJson() {
+  const abs = legacyMcpJsonPath();
+  if (!existsSync(abs)) return false;
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync(abs, 'utf-8'));
+  } catch {
+    return false; // not ours to repair
+  }
+  const { cfg, removed, empty } = removeLegacyEntry(parsed);
+  if (!removed) return false;
+  if (empty) unlinkSync(abs);
+  else writeJson(abs, cfg);
+  return true;
+}
+
+function legacyMcpJsonPath() {
+  return join(homedir(), '.mcp.json');
 }
 
 export function absoluteMcpPath(platform) {
@@ -397,9 +445,10 @@ export function absoluteMcpPath(platform) {
     case 'qwen-code':
       return join(homedir(), '.qwen', 'settings.json');
     case 'devin':
+      return legacyMcpJsonPath();
     case 'claude-code':
     default:
-      return join(homedir(), '.mcp.json');
+      return join(homedir(), '.claude.json');
   }
 }
 
