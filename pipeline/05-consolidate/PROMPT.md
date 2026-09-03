@@ -12,6 +12,7 @@ The `/tfg-consolidate` skill (or the `get_next_consolidation` MCP tool) returns:
 - Your consolidation **claim_id** (a UUID)
 - The **organization** (name, slug, url)
 - Two **source_reports** (markdown), each ending in an EVIDENCE TABLE
+- Each source report's **citation_verdicts**: the server's deterministic per-line check of that researcher's EVIDENCE TABLE (`verified`, `fabricated`, or `unverifiable`, with a note), keyed by row (`e`) and, for a row's second and third lines, `e#2` and `e#3`. A line marked `fabricated` quotes text that is not on its cited page, or cites a URL that does not exist: leave it out of your merged table (the server will not lift it either) and prefer the row's other lines or the other researcher's row for that criterion.
 
 ## Your Task; the EVIDENCE TABLE
 
@@ -20,6 +21,8 @@ For each row (a1, a2, a3, b, c, d, e, f), compare the two source reports' quotes
 - **Both filled with compatible evidence** → put the stronger quote first (longer, more specific, cited to the exact page rather than an overview). When the two quotes are distinct, keep the other as a second line with the same row key (up to three lines per row, one quote and one URL per line): the row scores on its best line, and a line that fails citation verification drops on its own, so the row keeps the other.
 - **Only one filled** → use that one.
 - **Both blank** → leave it blank. A blank is the honest answer when the evidence doesn't exist.
+- **One source has the evidence in its PROSE but left the table row blank** → lift it into your merged row. A common failure is good evidence stranded in a researcher's narrative and never transcribed; your job is to rescue it into the table.
+- **Counterfactual rows e/f** → the quote must name the study DESIGN (RCT / control / comparison group), not just the result. If a source quoted a result, replace it with the design sentence from that same study. A submit-time lint rejects e/f rows that quote a result (your claim stays active; fix and resubmit).
 - **They disagree** (different URLs, materially different evidence on the same row) → take the better-supported one *and* add the row key to your `disagreement_rows`. The hierarchy when picking the better one:
   1. RCT > quasi-experimental > self-reported survey > anecdote
   2. Third-party citation > org-self-cite

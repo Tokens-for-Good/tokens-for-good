@@ -83,10 +83,10 @@ Keep the table with all columns. For each of the 20 negative consequences, add a
 
 #### PROMPT 5; Counterfactual Results
 
-Keep the table with ALL previous columns. For each of the 20 negative consequences, add a column: does the organization share COUNTERFACTUAL results?
+Do NOT restate Prompt 4's columns. Output only two columns: the consequence number and the counterfactual assessment. (Restating Prompt 4 verbatim is the #1 cause of bloated, over-length reports.)
 
 - Start each cell with "Yes.", "Partial.", or "No counterfactual results."
-- Describe study design (RCT, quasi-experimental, matched comparison), sample sizes, what the control/comparison group showed.
+- Describe the study DESIGN (RCT, quasi-experimental, matched comparison), sample sizes, and what the control/comparison group showed; the design, not just the result number. "Graduates earned 32% more" is a result; "in an RCT the treatment group earned 32% more than the control group" is the design.
 - Counterfactual = comparison to what would have happened without the intervention. Before/after alone does not count.
 
 #### SUMMARY REPORT
@@ -139,12 +139,22 @@ The score is computed deterministically by code from this table, not by you. Lea
 | f   |                                      |            |             |
 
 **Rules for the EVIDENCE TABLE:**
+- **Use exactly these four columns in this order: `Row | Quote | URL | Name`.** Do not add a "Definition" or "What to quote" column, and do not bundle the URL inside the quote cell; the score is parsed from these columns, so a different layout can zero out real evidence.
 - The quoted text must appear verbatim on the cited page. A separate fact-check pass verifies your quotes against the page bodies after submission; invented or paraphrased quotes get the report flagged.
 - Use the real URL of the specific page that contains the quote. Not the org homepage. Not `example.com`.
+- For a2 and a3, the number/percentage (a2) and the population + year (a3) must appear **inside the quoted text:** that's what the scorer reads. Reusing the a1 quote is fine if it already contains them; a number or year that only appears elsewhere in your prose does not count.
 - A blank row is the correct answer when the evidence doesn't exist. Do not invent.
 - One row, one quote, one URL. Don't bundle two facts under one citation.
-- **Two or three quotes can back one row.** When two distinct quotes (or two different sources) support the same row, add a second line with the same row key, up to three lines per key, one quote and one URL per line, each still verbatim. The server scores the row on its best line, checks every line against its page separately, and drops a line that fails verification on its own, so the row keeps its other quotes. Lines beyond the third are ignored. Example, two lines with the same key: `c | "27% reduction in under-five mortality" | url-of-impact-report` and, on the next line, `c | "under-five mortality fell from 82 to 60 per 1,000 live births" | url-of-independent-evaluation`.
+- **Two or three quotes can back one row.** When two distinct quotes (or two different sources) support the same row, add a second line with the same row key, up to three lines per key, one quote and one URL per line, each still verbatim. The server scores the row on its best line, checks every line against its page separately, and drops a line that fails verification on its own, so the row keeps its other quotes. Lines beyond the third are ignored.
 - For e and f: if the design is "self-reported survey of current borrowers" or "before/after with no comparison group", leave the row blank. Those are not counterfactual evidence.
+- **Transcribe your findings.** Every row your PROMPT 4/5 worksheet or summary sections support MUST be filled. A blank row means you genuinely found nothing, NOT that you forgot to copy it across. The score reads ONLY this table, so evidence left in your prose scores zero. This is the #1 way good research loses its score.
+- **A submit-time lint will reject the report (your claim stays active; fix and resubmit) if a counterfactual row e/f quotes a result instead of a study design, or an adaptation row d states tenure instead of a documented change.**
+
+**Worked examples:**
+- Row e/f; WRONG (scores zero): `e | "graduates earned 32% more than non-graduates" | url`; a result with no comparison design. RIGHT (scores): `e | "In a randomized controlled trial the treatment group earned 32% more than the control group (N=676, p=0.01)" | url`; names the RCT/control design.
+- Row d; WRONG (scores zero): `d | "Since 2019 we have trained community health workers" | url`; that's tenure. RIGHT: `d | "We previously sold premix directly; after 2021 retention data we switched to an advisory model" | url`; shows the documented change.
+- Rows a1/a2/a3; give three facets of the org's condition-level goal (the goal, its number, its population+year). Reusing one quote across all three is fine ONLY if that one quote contains all three.
+- A row with two supporting quotes; two lines, same key: `c | "27% reduction in under-five mortality" | url-of-impact-report` and, on the next line, `c | "under-five mortality fell from 82 to 60 per 1,000 live births" | url-of-independent-evaluation`. The row scores on whichever line rates higher; if one quote is not found on its page, only that line is dropped and the row keeps the other.
 
 #### SOURCES
 
@@ -176,6 +186,9 @@ Run these checks before submitting. They are not optional.
 - [ ] All 7 summary sections present with substantive content
 - [ ] EVIDENCE TABLE has all 8 rows (a1, a2, a3, b, c, d, e, f); values may be blank where no evidence was found
 - [ ] A row with more than one supporting quote uses one line per quote (same row key, at most three lines), each verbatim with its own URL
+- [ ] Every EVIDENCE TABLE row your worksheet/summary supports is FILLED (blank = genuinely no evidence, not un-transcribed)
+- [ ] Counterfactual rows e/f quote the study DESIGN (RCT / control / comparison), not the result
+- [ ] Adaptation row d shows what CHANGED based on data, not just how long the program has run
 - [ ] SOURCES section lists every URL cited inline
 
 **Citations:**
@@ -195,3 +208,5 @@ Run these checks before submitting. They are not optional.
 ### 5. Submit
 
 Submit using `submit_report` with the full markdown as `report_markdown`. Set `prompt_version` to `"v3"`. Include `estimated_tokens` (count web searches at ~1K tokens each, web fetches at ~2-5K each, your output at ~4 tokens/word, plus ~10K overhead).
+
+If `submit_report` returns `lint_errors`, your claim is still active: fix the flagged EVIDENCE TABLE rows and call `submit_report` again. This is expected, not a failure; do not abandon the run.
