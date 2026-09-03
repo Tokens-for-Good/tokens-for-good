@@ -27,6 +27,12 @@ For each row (a1, a2, a3, b, c, d, e, f), compare the two source reports' quotes
 
 If you flag **≥3 rows** as disagreements, the server automatically spawns a third researcher and reopens this consolidation claim. You'll get all three reports next time.
 
+## What the server does with your table after you submit
+
+The server keeps a copy of your merged EVIDENCE TABLE, then compares it row by row with the source tables using the same deterministic raters that produce the score. When a source row rates strictly higher than yours (green over yellow over blank), the server lifts that source row (quote, URL, and name, verbatim) into the merged table. Rows a1 to a3 move together as one goals block, so the three goal rows always come from a single researcher. Rows the citation check marked fabricated stay out. Ties keep your row.
+
+`get_next_consolidation` shows each source report's `row_ratings` and `weighted_score`, so you can see which researcher's row rates higher before you merge. Match your table and your narrative to the best-rated evidence across the sources: that is what will score, and it keeps your prose consistent with the table the server stores. The submit response lists any rows the server lifted under `merge`.
+
 ## The Merged Report Structure
 
 Produce a single v3-shaped report. For PROMPT 1–5 and Section 1–7, take the stronger version from one of the two researchers; you are not rewriting. Your real work is the EVIDENCE TABLE.
