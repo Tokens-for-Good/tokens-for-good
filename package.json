@@ -21,7 +21,8 @@
     "pipeline/",
     "skills/",
     "LICENSE",
-    "SECURITY.md"
+    "SECURITY.md",
+    "npm-shrinkwrap.json"
   ],
   "scripts": {
     "start": "node src/mcp-server.js",
@@ -40,7 +41,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@modelcontextprotocol/sdk": "1.30.0",
     "prompts": "^2.4.2",
     "zod": "^4.3.6"
   }

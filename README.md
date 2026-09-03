@@ -117,6 +117,10 @@ npm install
 
 The MCP server entry point is `src/mcp-server.js`. The CLI is `src/cli.js`.
 
+### Dependency pinning
+
+`@modelcontextprotocol/sdk` is pinned to an exact version rather than a caret range, and `npm-shrinkwrap.json` ships in the tarball. The server runs with your API key in its environment, so the dependency tree that runs there should be the one that was reviewed when the version was published, not whatever resolves on the day it is installed. Both move only with a deliberate version bump (`npm install @modelcontextprotocol/sdk@<version>`, then `npm shrinkwrap`).
+
 ## License
 
 MIT; see [LICENSE](LICENSE).

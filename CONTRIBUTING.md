@@ -182,7 +182,7 @@ A proper `vitest` setup would be welcome — that's a great first PR.
 Maintainers only, but useful to know the flow:
 
 1. Bump version in `package.json` (semver — 0.4.x patches for fixes, 0.5.0 for features, etc.).
-2. Run `npm install` to regenerate `package-lock.json`.
+2. Run `npm install` then `npm shrinkwrap` to regenerate `npm-shrinkwrap.json` (the lockfile that ships in the tarball; there is no `package-lock.json`). `@modelcontextprotocol/sdk` is pinned to an exact version on purpose; bump it deliberately, never via a caret range.
 3. Commit (include a short "why" in the message, not just "what").
 4. `git push origin master`.
 5. `npm publish`.
