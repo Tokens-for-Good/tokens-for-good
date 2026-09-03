@@ -23,6 +23,8 @@ Works with Claude Code, OpenCode, Cursor, Windsurf, Devin, and Qwen Code as an M
 
 To change cadence later, run `npx tokens-for-good init` again.
 
+init runs the package through `npx` but never writes `npx` into your harness config. When it runs from the npx cache it installs the exact version it is running under `~/.tokens-for-good/pkg` (`--ignore-scripts`) and points the MCP entry and hook at `node <that path>/src/cli.js`, so no project you open can substitute its own copy. Re-run init after upgrading to move the entries to the new version.
+
 ### Web-tool permissions
 
 Research means reading nonprofit websites and searching the web, so a run needs
@@ -75,10 +77,12 @@ Once installed, these are available to your AI via the MCP server:
 | `submit_validation` | v3 validator: submit corrected reports (subtract/correct only, never add) |
 | `get_next_consolidation` | v3 consolidator: fetch your assignment + both source reports to merge |
 | `set_role_preference` | Prefer the low-fetch roles (validation/consolidation); best for local models |
-| `create_agent` / `list_agents` / `rotate_agent_key` / `revoke_agent` | Run several harnesses at once: each agent gets its own key + research slot |
-| `setup_automation` | Emits the self-contained `/schedule` prompt with the full methodology embedded (normally called by `/tfg-schedule` skill) |
+| `create_agent` / `list_agents` / `rotate_agent_key` / `revoke_agent` | Run several harnesses at once: each agent gets its own key + research slot. Keys come back masked (`tfg_live_ab…cd`); pass `reveal: true` to print one in full, knowing tool results persist in your session transcript |
+| `setup_automation` | Emits the self-contained `/schedule` prompt with the full methodology embedded (normally called by `/tfg-schedule` skill). Mints a dedicated `routine` agent and embeds that agent's key, never your interactive one |
 | `my_impact` / `research_status` | Your stats + the project leaderboard |
 | `snooze` | Quiet the session-start prompt for N days |
+
+**Allowlisting.** Every tool is registered with MCP annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) for hosts that read them. On Claude Code, `submit_report`, `submit_validation`, `create_agent`, `rotate_agent_key`, `revoke_agent` and `setup_automation` (which mints the routine key) additionally carry `_meta["anthropic/requiresUserInteraction"]`, so they ask for approval on every call even under an `mcp__tokens-for-good__*` allow rule; an instruction injected through a researched page cannot revoke an agent, mint or rotate a key, or submit under your name without a prompt. The read-only tools (`get_methodology`, `list_agents`, `research_status`, `my_impact`, `setup_guide`) and the claim/queue tools are safe to allowlist wholesale.
 
 ## Security model
 
@@ -96,7 +100,8 @@ Have an idea to make TFG more secure or trustworthy? [Open an issue](https://git
 
 - **OpenCode:** `init` writes `~/.config/opencode/opencode.json` and prints a cron line you can paste into `crontab -e`.
 - **Qwen Code:** `init` writes `~/.qwen/settings.json` (preserving other keys) plus a `/tfg` slash command at `~/.qwen/commands/tfg.md`. For recurring runs, enable Qwen Code's experimental cron (`QWEN_CODE_ENABLE_CRON=1`) or use a system cron line.
-- **Cursor / Windsurf / Devin:** `init` writes the MCP config; automation requires platform-native scheduling.
+- **Cursor:** `init` writes the user-level `~/.cursor/mcp.json` by default. Choosing the project-level `.cursor/mcp.json` instead puts your API key inside the repo folder, so init adds that path to the project's `.gitignore` and says so; automation requires platform-native scheduling.
+- **Windsurf / Devin:** `init` writes the MCP config; automation requires platform-native scheduling.
 
 ## Contributing
 
@@ -111,6 +116,10 @@ npm install
 ```
 
 The MCP server entry point is `src/mcp-server.js`. The CLI is `src/cli.js`.
+
+### Dependency pinning
+
+`@modelcontextprotocol/sdk` is pinned to an exact version rather than a caret range, and `npm-shrinkwrap.json` ships in the tarball. The server runs with your API key in its environment, so the dependency tree that runs there should be the one that was reviewed when the version was published, not whatever resolves on the day it is installed. Both move only with a deliberate version bump (`npm install @modelcontextprotocol/sdk@<version>`, then `npm shrinkwrap`).
 
 ## License
 

@@ -27,21 +27,15 @@ node src/cli.js init
 node src/cli.js session-start-hook
 ```
 
-To test in Claude Code against your local checkout instead of the published package, point `~/.mcp.json` at the absolute path:
+To test in Claude Code against your local checkout instead of the published package, run `node src/cli.js init` from the checkout: it writes a user-scope entry (the top-level `mcpServers` key of `~/.claude.json`) that points at the checkout's absolute `src/cli.js`. Or add it by hand with the same scope:
 
-```json
-{
-  "mcpServers": {
-    "tokens-for-good": {
-      "command": "node",
-      "args": ["/absolute/path/to/tokens-for-good/src/mcp-server.js"],
-      "env": { "TFG_API_KEY": "tfg_live_..." }
-    }
-  }
-}
+```bash
+claude mcp add --scope user tokens-for-good -e TFG_API_KEY=tfg_live_... -- node /absolute/path/to/tokens-for-good/src/cli.js --mcp
 ```
 
-Restart Claude Code fully after editing `.mcp.json`.
+`~/.mcp.json` is not a user-scope file: Claude Code finds it by walking up from the project directory and treats it as that project's `.mcp.json`, so it only loads (after an approval prompt) in projects under your home folder. init migrates an entry it finds there.
+
+Restart Claude Code fully after changing the MCP config.
 
 ## Project structure
 
@@ -72,7 +66,7 @@ The mental model most contributors need:
    - A SessionStart hook entry (Claude Code only for now)
    - The `/tfg` and `/tfg-schedule` skill files (Claude Code only for now)
    - `~/.tokens-for-good/state.json` with the chosen flow
-2. **The user opens the harness.** A SessionStart-style hook (or whatever the harness provides) runs `npx tokens-for-good session-start-hook`, which reads state.json and, on the first session after init, emits a JSON payload telling the AI to invoke `/tfg-schedule` or `/tfg`.
+2. **The user opens the harness.** A SessionStart-style hook (or whatever the harness provides) runs `node <absolute cli.js> session-start-hook`, which reads state.json and, on the first session after init, emits a JSON payload telling the AI to invoke `/tfg-schedule` or `/tfg`. Both the hook and the MCP entry bake in the absolute node binary and the absolute `cli.js` (from `~/.tokens-for-good/pkg` when init ran via `npx`, otherwise the install init ran from); a bare `npx tokens-for-good` would resolve project-first and let any repository's own `tokens-for-good` run in their place.
 3. **The AI invokes the skill.** Skills are Markdown instruction files the AI reads and follows. `/tfg-schedule` tells it to call the TFG MCP's `setup_automation` tool, extract the scheduled-research prompt, and invoke the harness's scheduling mechanism (Claude Code's `/schedule`, OpenCode's cron, Devin's recurring sessions, etc.).
 4. **Scheduled runs call the API directly**, not the MCP. The research agent uses `WebFetch` against the TFG HTTP endpoints so it can run on cloud infrastructure that has no local MCP access.
 
@@ -188,12 +182,12 @@ A proper `vitest` setup would be welcome — that's a great first PR.
 Maintainers only, but useful to know the flow:
 
 1. Bump version in `package.json` (semver — 0.4.x patches for fixes, 0.5.0 for features, etc.).
-2. Run `npm install` to regenerate `package-lock.json`.
+2. Run `npm install` then `npm shrinkwrap` to regenerate `npm-shrinkwrap.json` (the lockfile that ships in the tarball; there is no `package-lock.json`). `@modelcontextprotocol/sdk` is pinned to an exact version on purpose; bump it deliberately, never via a caret range.
 3. Commit (include a short "why" in the message, not just "what").
 4. `git push origin master`.
 5. `npm publish`.
 
-**If you changed anything under `pipeline/`** (the methodology PROMPT files), also bump `METHODOLOGY_VERSION` in `src/methodology.js` AND `ResearchMethodology::VERSION` in the backend repo (Code-to-Market/fierce-philanthropy) — the two ship synced copies of the same files, and scheduled routines compare the versions at runtime via `/api/research/parameters`. Both sides must land together or every routine starts reporting version drift.
+**If you changed anything under `pipeline/`** (the methodology PROMPT files), also bump `METHODOLOGY_VERSION` in `src/methodology.js` AND `ResearchMethodology::VERSION` in the backend repo (Code-to-Market/fierce-philanthropy) — the two ship synced copies of the same files, and scheduled routines compare the versions at runtime via `/api/research/parameters`. Both sides must land together or every routine starts reporting version drift. The server's `resources/pipeline/*.md` is the source of truth: `src/prompts.test.js` fails whenever a `pipeline/*/PROMPT.md` differs from it (line endings ignored), looking for the server checkout next to this repo or at `TFG_SERVER_PIPELINE_DIR`, and skips with a message when neither exists.
 
 The `files` field in `package.json` controls what ships. Keep it tight — node_modules, tests, docs, and `.git*` are excluded by default.
 

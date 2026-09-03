@@ -3,8 +3,8 @@
 // choice and writes MCP config, SessionStart hook, skills, and state.json
 // so the user's next Claude Code session acts on their choice immediately.
 import prompts from 'prompts';
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, cpSync, unlinkSync } from 'fs';
+import { join, dirname, isAbsolute } from 'path';
 import { homedir } from 'os';
 import { fileURLToPath } from 'url';
 import { spawnSync } from 'child_process';
@@ -13,7 +13,7 @@ import { loadState, saveState, getOrCreateInstallId } from './state.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PKG_ROOT = join(__dirname, '..');
-const IS_WINDOWS = process.platform === 'win32';
+const PKG_VERSION = JSON.parse(readFileSync(join(PKG_ROOT, 'package.json'), 'utf-8')).version;
 
 const FREQUENCY_CHOICES = [
   { title: 'Daily (recommended); pick how many runs per day next',        value: 'daily'   },
@@ -72,6 +72,26 @@ export async function runInit() {
     initial: detectedIdx,
   }, { onCancel });
 
+  // Step 2b: Cursor reads MCP config from the user level (~/.cursor/mcp.json)
+  // or from the project (<cwd>/.cursor/mcp.json). The project file is
+  // Cursor's shareable convention and would carry the key into the repo, so
+  // the user level is the default and a project choice is gitignored and
+  // called out.
+  let cursorScope = 'user';
+  if (platform === 'cursor') {
+    const { scope } = await prompts({
+      type: 'select',
+      name: 'scope',
+      message: 'Where should Cursor read the Tokens for Good entry from?',
+      choices: [
+        { title: 'User level (~/.cursor/mcp.json); recommended, never inside a repo', value: 'user' },
+        { title: `This project (${join(process.cwd(), '.cursor', 'mcp.json')}); holds your API key, gets gitignored`, value: 'project' },
+      ],
+      initial: 0,
+    }, { onCancel });
+    cursorScope = scope;
+  }
+
   // Step 3: Frequency (mandatory choice; this is the whole point of init)
   const { choice } = await prompts({
     type: 'select',
@@ -126,7 +146,7 @@ export async function runInit() {
 
   // Step 4: Preview + confirm
   console.log('\nAbout to write:');
-  const plans = planWrites(platform, allowWebTools);
+  const plans = planWrites(platform, allowWebTools, cursorScope);
   for (const p of plans) console.log(`  • ${p.label}`);
   console.log('');
 
@@ -138,32 +158,46 @@ export async function runInit() {
   }, { onCancel });
   if (!go) onCancel();
 
-  // Execute
+  // Execute. The harness entries run `node <absolute cli.js>`, so first make
+  // sure that file lives somewhere stable (see ensureStableRuntime).
+  const cliPath = ensureStableRuntime();
+  if (isEphemeralInstall()) console.log(`✓ ${plans[0].label}`);
+  const written = plans.filter(p => !p.runtime);
+
   const apiKeyTrimmed = apiKey.trim();
-  writeMcpConfig(platform, apiKeyTrimmed);
-  console.log(`✓ ${plans[0].label}`);
+  const { migratedLegacyEntry, gitignore } = writeMcpConfig(platform, apiKeyTrimmed, cliPath, { cursorScope });
+  console.log(`✓ ${written[0].label}`);
+  if (migratedLegacyEntry) {
+    console.log(`    moved the tokens-for-good entry out of ${homeRelative(legacyMcpJsonPath())}: Claude Code read that file as a`);
+    console.log(`    per-project .mcp.json (approval prompt in every project under your home folder, no server elsewhere).`);
+  }
+  if (gitignore) {
+    console.log(`✓ ${written[1].label}${gitignore.added ? '' : ' (already listed)'}`);
+    console.log('    WARNING: that MCP file sits inside this project and holds your API key. Keep it out of');
+    console.log('    commits, shared folders and screenshots; re-run init and pick the user level to move it.');
+  }
 
   if (platform === 'claude-code') {
-    writeSessionStartHook();
+    writeSessionStartHook(cliPath);
     if (allowWebTools) {
       const { added, skipped } = writePermissionsAllowlist();
-      console.log(`✓ ${plans[1].label}`);
+      console.log(`✓ ${written[1].label}`);
       if (added.length) console.log(`    added to permissions.allow: ${added.join(', ')}`);
       for (const s of skipped) console.log(`    left as you had it: ${s.tool} (${s.reason})`);
     } else {
-      console.log(`✓ ${plans[1].label}`);
+      console.log(`✓ ${written[1].label}`);
     }
     writeSkillFile('tfg-schedule');
-    console.log(`✓ ${plans[2].label}`);
+    console.log(`✓ ${written[2].label}`);
     writeSkillFile('tfg');
-    console.log(`✓ ${plans[3].label}`);
+    console.log(`✓ ${written[3].label}`);
     writeSkillFile('tfg-consolidate');
-    console.log(`✓ ${plans[4].label}`);
+    console.log(`✓ ${written[4].label}`);
     writeSkillFile('tfg-validate');
-    console.log(`✓ ${plans[5].label}`);
+    console.log(`✓ ${written[5].label}`);
   } else if (platform === 'qwen-code') {
     writeQwenCommand('tfg');
-    console.log(`✓ ${plans[1].label}`);
+    console.log(`✓ ${written[1].label}`);
   }
 
   // Generate the install_id at install time so it lines up cleanly with
@@ -185,13 +219,21 @@ export async function runInit() {
 
   // Closing message
   console.log('\n✓ Setup complete.\n');
-  printClosingGuidance(platform, intended_flow, intended_frequency, runs_per_day, allowWebTools);
+  printClosingGuidance(platform, intended_flow, intended_frequency, runs_per_day, allowWebTools, cursorScope);
 }
 
 // --- Planning (for preview + execute) ---
 
-function planWrites(platform, allowWebTools = false) {
-  const plans = [{ label: `${mcpConfigPath(platform)}  (MCP server entry)` }];
+function planWrites(platform, allowWebTools = false, cursorScope = 'user') {
+  const plans = [];
+  if (isEphemeralInstall()) {
+    plans.push({ runtime: true, label: `${homeRelative(privatePackageDir())}  (private copy of tokens-for-good@${PKG_VERSION}; the npx cache is temporary)` });
+  }
+  const projectLocal = platform === 'cursor' && cursorScope === 'project';
+  plans.push({ label: `${mcpConfigPath(platform, { cursorScope })}  (MCP server entry${platform === 'claude-code' ? ', user scope' : ''}${projectLocal ? '; PROJECT-LOCAL, holds your API key' : ''})` });
+  if (projectLocal) {
+    plans.push({ label: `${join(process.cwd(), '.gitignore')}  (add .cursor/mcp.json so the key is never committed)` });
+  }
   if (platform === 'claude-code') {
     plans.push({
       label: allowWebTools
@@ -215,14 +257,107 @@ function homeRelative(abs) {
   return abs.startsWith(homedir()) ? '~' + abs.slice(homedir().length).replace(/\\/g, '/') : abs;
 }
 
-function mcpConfigPath(platform) {
-  return homeRelative(absoluteMcpPath(platform));
+function mcpConfigPath(platform, opts = {}) {
+  return homeRelative(absoluteMcpPath(platform, opts));
 }
 
 function settingsPath()         { return homeRelative(join(homedir(), '.claude', 'settings.json')); }
 function skillPath(name)        { return homeRelative(join(homedir(), '.claude', 'skills', name, 'SKILL.md')); }
 function qwenCommandPath(name)  { return homeRelative(join(homedir(), '.qwen', 'commands', `${name}.md`)); }
 function statePath()            { return homeRelative(join(homedir(), '.tokens-for-good', 'state.json')); }
+
+// --- Runtime location ---
+//
+// Harness entries used to run `npx -y tokens-for-good`. npm resolves that
+// bare name project-first, so any repository with its own `tokens-for-good`
+// in node_modules got to run as the MCP server (with the key in env) and as
+// the SessionStart hook in every session opened inside it. Entries now run
+// `node <absolute path to cli.js>` from a location no project can shadow.
+
+export function packageRoot() { return PKG_ROOT; }
+
+// `npx tokens-for-good init` executes from npm's _npx cache, which npm prunes
+// and rewrites; an entry pointing there breaks on the next npx run.
+export function isEphemeralInstall(root = PKG_ROOT) {
+  return root.split(/[\\/]/).includes('_npx');
+}
+
+export function privatePackageDir() {
+  return join(homedir(), '.tokens-for-good', 'pkg');
+}
+
+export function cliPathFor(root) {
+  return join(root, 'src', 'cli.js');
+}
+
+function installedVersion(pkgDir) {
+  try {
+    return JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf-8')).version;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Absolute path to the cli.js the harness entries should execute. A checkout
+ * or a global/project install is stable already and is used in place. An npx
+ * cache run first installs this exact version under ~/.tokens-for-good/pkg
+ * (pinned, `--ignore-scripts`), falling back to copying the tree that is
+ * running when the registry is unreachable or the version is unpublished.
+ */
+export function ensureStableRuntime({ root = PKG_ROOT, version = PKG_VERSION, log = console.log, installer = npmInstallPinned } = {}) {
+  if (!isEphemeralInstall(root)) return cliPathFor(root);
+
+  const dir = privatePackageDir();
+  const installed = join(dir, 'node_modules', 'tokens-for-good');
+  if (installedVersion(installed) === version) return cliPathFor(installed);
+
+  log(`Installing tokens-for-good@${version} to ${homeRelative(dir)} (the npx cache is temporary)...`);
+  mkdirSync(dir, { recursive: true, mode: 0o700 });
+  const result = installer(dir, version);
+  if (result.ok && installedVersion(installed) === version) return cliPathFor(installed);
+
+  log(`  registry install did not complete${result.detail ? ` (${result.detail})` : ''}; copying the running package instead.`);
+  copyRunningTree(root, dir);
+  if (installedVersion(installed) !== version) {
+    throw new Error(
+      `Could not place tokens-for-good@${version} under ${dir}.\n` +
+      `Install it once with "npm install -g tokens-for-good" and run "tokens-for-good init" from that install.`
+    );
+  }
+  return cliPathFor(installed);
+}
+
+function npmInstallPinned(dir, version) {
+  const npmCli = resolveNpmCli();
+  if (!npmCli) return { ok: false, detail: 'npm not found next to node' };
+  const r = spawnSync(process.execPath, [
+    npmCli, 'install', '--prefix', dir,
+    '--ignore-scripts', '--no-audit', '--no-fund', '--no-package-lock', '--loglevel=error',
+    `tokens-for-good@${version}`,
+  ], { encoding: 'utf-8', timeout: 180_000 });
+  if (r.status === 0) return { ok: true, detail: '' };
+  const detail = (r.stderr || r.error?.message || `exit ${r.status}`).trim().split(/\r?\n/).pop();
+  return { ok: false, detail };
+}
+
+// Run npm through node + npm-cli.js rather than an `npm`/`npm.cmd` lookup, so
+// this works with the stripped PATH some launchers give us and never needs a
+// shell on Windows.
+function resolveNpmCli() {
+  const candidates = [];
+  if (process.env.npm_execpath) candidates.push(join(dirname(process.env.npm_execpath), 'npm-cli.js'));
+  const bin = dirname(process.execPath);
+  candidates.push(join(bin, 'node_modules', 'npm', 'bin', 'npm-cli.js'));
+  candidates.push(join(bin, '..', 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js'));
+  return candidates.find(p => existsSync(p)) ?? null;
+}
+
+// In an npx cache the package and its dependencies sit side by side under one
+// node_modules, so copying that directory yields a working tree.
+function copyRunningTree(root, dir) {
+  cpSync(dirname(root), join(dir, 'node_modules'), { recursive: true, dereference: true, force: true });
+}
 
 // --- File writers ---
 
@@ -246,73 +381,146 @@ function ensureDir(path) {
 
 function writeJson(path, obj) {
   ensureDir(path);
-  // MCP config files embed TFG_API_KEY, so write them owner-only (0600) rather
-  // than the default 0644; matches how state.js protects state.json. (No-op on
-  // Windows, which ignores POSIX mode bits.)
+  // MCP config files embed TFG_API_KEY, so a file created here is owner-only
+  // (0600) like state.json. The mode applies on creation; a config file that
+  // already existed keeps whatever mode it had. No-op on Windows.
   writeFileSync(path, JSON.stringify(obj, null, 2) + '\n', { encoding: 'utf-8', mode: 0o600 });
 }
 
-function mcpServerEntry(apiKey) {
-  return IS_WINDOWS
-    ? { command: 'cmd', args: ['/c', 'npx', '-y', 'tokens-for-good', '--mcp'], env: { TFG_API_KEY: apiKey } }
-    : { command: 'npx',                 args: ['-y', 'tokens-for-good', '--mcp'], env: { TFG_API_KEY: apiKey } };
+/**
+ * The MCP server entry every harness gets: the node binary running init plus
+ * the absolute cli.js, never a package name for npx to resolve.
+ */
+export function mcpServerEntry(apiKey, cliPath) {
+  assertRuntimePath(cliPath);
+  return { command: process.execPath, args: [cliPath, '--mcp'], env: { TFG_API_KEY: apiKey } };
 }
 
-function writeMcpConfig(platform, apiKey) {
-  const abs = absoluteMcpPath(platform);
+function assertRuntimePath(cliPath) {
+  if (!cliPath || !isAbsolute(cliPath)) throw new Error(`runtime path must be absolute, got ${cliPath}`);
+}
+
+function writeMcpConfig(platform, apiKey, cliPath, { cursorScope = 'user' } = {}) {
+  const abs = absoluteMcpPath(platform, { cursorScope });
   const cfg = readJsonOrEmpty(abs);
-  const entry = mcpServerEntry(apiKey);
+  const entry = mcpServerEntry(apiKey, cliPath);
 
   if (platform === 'opencode') {
     cfg.mcp ??= {};
     cfg.mcp['tokens-for-good'] = {
       type: 'local',
-      command: ['npx', '-y', 'tokens-for-good', '--mcp'],
-      environment: { TFG_API_KEY: apiKey },
+      command: [entry.command, ...entry.args],
+      environment: entry.env,
     };
+  } else if (platform === 'claude-code') {
+    mergeMcpServer(cfg, { type: 'stdio', ...entry });
   } else {
-    cfg.mcpServers ??= {};
-    cfg.mcpServers['tokens-for-good'] = entry;
+    mergeMcpServer(cfg, entry);
   }
   writeJson(abs, cfg);
+
+  const migratedLegacyEntry = platform === 'claude-code' ? migrateLegacyMcpJson() : false;
+  const gitignore = platform === 'cursor' && cursorScope === 'project'
+    ? ensureGitignoreEntry(join(process.cwd(), '.gitignore'), '.cursor/mcp.json')
+    : null;
+  return { migratedLegacyEntry, gitignore };
 }
 
-function absoluteMcpPath(platform) {
+// Append `entry` to a .gitignore unless a line already covers it. Creates the
+// file when the project has none.
+export function ensureGitignoreEntry(path, entry) {
+  const existing = existsSync(path) ? readFileSync(path, 'utf-8') : '';
+  const listed = existing.split(/\r?\n/).some(line => {
+    const t = line.trim();
+    return t === entry || t === `/${entry}`;
+  });
+  if (listed) return { added: false };
+  const separator = existing.length === 0 || existing.endsWith('\n') ? '' : '\n';
+  writeFileSync(path, `${existing}${separator}${entry}\n`, 'utf-8');
+  return { added: true };
+}
+
+// Add or replace our entry, leaving every other key of the file alone. For
+// Claude Code the file is ~/.claude.json, which holds a lot of unrelated state.
+export function mergeMcpServer(cfg, entry) {
+  if (!cfg.mcpServers || typeof cfg.mcpServers !== 'object' || Array.isArray(cfg.mcpServers)) cfg.mcpServers = {};
+  cfg.mcpServers['tokens-for-good'] = entry;
+  return cfg;
+}
+
+// Earlier versions wrote the Claude Code entry to ~/.mcp.json. That is not a
+// user-scope file: Claude Code finds it by walking up from the project and
+// treats it as that project's .mcp.json, so every project under the home
+// folder asked for approval and projects elsewhere never saw the server.
+// User scope is the top-level `mcpServers` key of ~/.claude.json.
+export function removeLegacyEntry(cfg) {
+  if (!cfg?.mcpServers || !('tokens-for-good' in cfg.mcpServers)) return { cfg, removed: false };
+  delete cfg.mcpServers['tokens-for-good'];
+  const empty = Object.keys(cfg.mcpServers).length === 0 && Object.keys(cfg).length === 1;
+  return { cfg, removed: true, empty };
+}
+
+function migrateLegacyMcpJson() {
+  const abs = legacyMcpJsonPath();
+  if (!existsSync(abs)) return false;
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync(abs, 'utf-8'));
+  } catch {
+    return false; // not ours to repair
+  }
+  const { cfg, removed, empty } = removeLegacyEntry(parsed);
+  if (!removed) return false;
+  if (empty) unlinkSync(abs);
+  else writeJson(abs, cfg);
+  return true;
+}
+
+function legacyMcpJsonPath() {
+  return join(homedir(), '.mcp.json');
+}
+
+export function absoluteMcpPath(platform, { cursorScope = 'user' } = {}) {
   switch (platform) {
     case 'opencode':
       return join(homedir(), '.config', 'opencode', 'opencode.json');
     case 'cursor':
-      return join(process.cwd(), '.cursor', 'mcp.json');
+      return cursorScope === 'project'
+        ? join(process.cwd(), '.cursor', 'mcp.json')
+        : join(homedir(), '.cursor', 'mcp.json');
     case 'windsurf':
       return join(homedir(), '.codeium', 'windsurf', 'mcp_config.json');
     case 'qwen-code':
       return join(homedir(), '.qwen', 'settings.json');
     case 'devin':
+      return legacyMcpJsonPath();
     case 'claude-code':
     default:
-      return join(homedir(), '.mcp.json');
+      return join(homedir(), '.claude.json');
   }
 }
 
-function writeSessionStartHook() {
+// An entry init wrote earlier, in either the npx form or the node form.
+export function isOurHookEntry(entry) {
+  const text = JSON.stringify(entry);
+  return text.includes('session-start-hook') && (text.includes('tokens-for-good') || text.includes('cli.js'));
+}
+
+function writeSessionStartHook(cliPath) {
   const abs = join(homedir(), '.claude', 'settings.json');
   const cfg = readJsonOrEmpty(abs);
   cfg.hooks ??= {};
   cfg.hooks.SessionStart ??= [];
 
-  const signature = 'tokens-for-good session-start-hook';
   // Replace any prior TFG entry rather than skip-if-present, so re-running init
-  // repairs or upgrades a stale command (e.g. one missing the absolute npx path
-  // or the resilience flags below). Without this, a broken hook can never be
-  // fixed by re-running init.
-  cfg.hooks.SessionStart = cfg.hooks.SessionStart.filter(
-    entry => !JSON.stringify(entry).includes(signature),
-  );
+  // repairs or upgrades a stale command (e.g. the old `npx -y tokens-for-good`
+  // form). Without this, a broken hook can never be fixed by re-running init.
+  cfg.hooks.SessionStart = cfg.hooks.SessionStart.filter(entry => !isOurHookEntry(entry));
   cfg.hooks.SessionStart.push({
     matcher: '',
     hooks: [{
       type: 'command',
-      command: hookCommand(),
+      command: hookCommand(cliPath),
     }],
   });
   writeJson(abs, cfg);
@@ -374,62 +582,18 @@ function writePermissionsAllowlist() {
 }
 
 // Claude Code runs SessionStart hooks with a stripped PATH that often omits
-// the node/npx bin dir; C:\Program Files\nodejs on Windows, or the nvm/
-// homebrew bin when Claude Code is launched from the macOS Dock/Finder; so a
-// bare `npx` lookup fails and the session shows a "hook error". Resolve the
-// absolute npx path at init time (full PATH available) and bake it in.
+// the node bin dir (C:\Program Files\nodejs on Windows, or the nvm/homebrew
+// bin when Claude Code is launched from the macOS Dock/Finder), so the hook
+// bakes in the absolute node binary and the absolute cli.js.
 //
 // `2>/dev/null || true` makes the hook non-fatal: this is an optional
-// contribution tool, so a missing npx, offline registry, or other hiccup must never
-// disrupt the user's session. Hooks run under bash/sh on every platform (Git
-// Bash on Windows), so this syntax is portable.
-function hookCommand() {
-  const npxPath = resolveNpxPath();
+// contribution tool, so a missing file or other hiccup must never disrupt the
+// user's session. Hooks run under bash/sh on every platform (Git Bash on
+// Windows), so this syntax is portable.
+export function hookCommand(cliPath) {
+  assertRuntimePath(cliPath);
   // Bash accepts double-quoted paths with spaces; backslashes get JSON-escaped on write.
-  return `"${npxPath}" -y tokens-for-good session-start-hook 2>/dev/null || true`;
-}
-
-function resolveNpxPath() {
-  if (IS_WINDOWS) {
-    return resolveWindowsNpxPath();
-  }
-
-  // macOS / Linux: prefer `which npx`, then npx alongside the running node
-  // binary, then a bare `npx` fallback (relies on PATH; last resort).
-  try {
-    const r = spawnSync('which', ['npx'], { encoding: 'utf-8' });
-    if (r.status === 0) {
-      const first = r.stdout.trim().split(/\r?\n/)[0];
-      if (first && existsSync(first)) {
-        return first;
-      }
-    }
-  } catch { /* fall through */ }
-
-  const alongside = join(dirname(process.execPath), 'npx');
-  if (existsSync(alongside)) {
-    return alongside;
-  }
-
-  return 'npx';
-}
-
-function resolveWindowsNpxPath() {
-  // First try `where npx.cmd`; most reliable when PATH is correct.
-  try {
-    const r = spawnSync('where', ['npx.cmd'], { encoding: 'utf-8' });
-    if (r.status === 0) {
-      const first = r.stdout.trim().split(/\r?\n/)[0];
-      if (first && existsSync(first)) return first;
-    }
-  } catch { /* fall through */ }
-
-  // Fallback: npx.cmd usually sits alongside node.exe.
-  const alongside = join(dirname(process.execPath), 'npx.cmd');
-  if (existsSync(alongside)) return alongside;
-
-  // Last-resort guess; user's hook may need manual edit if this is wrong.
-  return 'C:\\Program Files\\nodejs\\npx.cmd';
+  return `"${process.execPath}" "${cliPath}" session-start-hook 2>/dev/null || true`;
 }
 
 function writeSkillFile(name) {
@@ -451,7 +615,7 @@ function writeQwenCommand(name) {
 
 // --- Closing guidance ---
 
-function printClosingGuidance(platform, flow, freq, runsPerDay = 1, allowWebTools = false) {
+function printClosingGuidance(platform, flow, freq, runsPerDay = 1, allowWebTools = false, cursorScope = 'user') {
   const cadence = freq === 'daily' && runsPerDay > 1 ? `daily (${runsPerDay}× per day)` : freq;
   if (platform === 'claude-code') {
     if (flow === 'scheduled') {
@@ -507,7 +671,11 @@ function printClosingGuidance(platform, flow, freq, runsPerDay = 1, allowWebTool
     return;
   }
   // cursor, windsurf, devin
-  console.log(`MCP config written to ${mcpConfigPath(platform)}.`);
+  console.log(`MCP config written to ${mcpConfigPath(platform, { cursorScope })}.`);
+  if (platform === 'cursor' && cursorScope === 'project') {
+    console.log('That file is inside this project and holds your API key. It is listed in .gitignore now; keep it out');
+    console.log('of commits, shared folders and screenshots, or re-run init and pick the user level instead.');
+  }
   console.log(`Restart ${platform} and run: "Research a nonprofit org for Fierce Philanthropy."`);
   if (flow === 'scheduled') {
     console.log(`Scheduling on ${platform} requires platform-native setup; see setup_automation tool for details.`);

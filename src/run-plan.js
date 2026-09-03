@@ -12,16 +12,26 @@
 // the user along on a first run, not to add an approval gate to a task they
 // already asked for. A pause also breaks unattended scheduled runs, where
 // nobody is there to answer.
+import { cleanText } from './untrusted.js';
+
+// Tool results carry the org name and url on their single untrusted data
+// line; the plan refers to that line rather than repeating the text, so
+// server-relayed free text appears exactly once, labelled.
+export const CLAIMED_ORG_REF = 'the organization on the data line above (its name and url are shown there)';
 
 /**
  * The plan itself, as markdown the agent prints verbatim.
  *
- * @param {{orgName?: string|null, orgUrl?: string|null}} [org]
+ * @param {{orgName?: string|null, orgUrl?: string|null, orgRef?: string|null}} [org]
+ *   orgRef is a fixed phrase pointing at the org (see CLAIMED_ORG_REF);
+ *   orgName/orgUrl are used in the scheduled prompt's placeholder form.
  */
-export function runPlan({ orgName = null, orgUrl = null } = {}) {
-  const target = orgName
-    ? `${orgName}${orgUrl ? ` (${orgUrl})` : ''}`
-    : 'the next organization in the Tokens for Good queue';
+export function runPlan({ orgName = null, orgUrl = null, orgRef = null } = {}) {
+  const target = orgRef
+    ? orgRef
+    : orgName
+      ? `${cleanText(orgName, 120)}${orgUrl ? ` (${cleanText(orgUrl, 200)})` : ''}`
+      : 'the next organization in the Tokens for Good queue';
 
   return `**Run plan**
 - **Researching:** ${target}
@@ -35,7 +45,7 @@ export function runPlan({ orgName = null, orgUrl = null } = {}) {
  * The plan plus the instructions the agent needs to act on it. This is what
  * tool results embed.
  *
- * @param {{orgName?: string|null, orgUrl?: string|null}} [org]
+ * @param {{orgName?: string|null, orgUrl?: string|null, orgRef?: string|null}} [org]
  */
 export function runPlanForAgent(org = {}) {
   return `${runPlan(org)}
