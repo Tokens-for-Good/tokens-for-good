@@ -187,7 +187,7 @@ Maintainers only, but useful to know the flow:
 4. `git push origin master`.
 5. `npm publish`.
 
-**If you changed anything under `pipeline/`** (the methodology PROMPT files), also bump `METHODOLOGY_VERSION` in `src/methodology.js` AND `ResearchMethodology::VERSION` in the backend repo (Code-to-Market/fierce-philanthropy) — the two ship synced copies of the same files, and scheduled routines compare the versions at runtime via `/api/research/parameters`. Both sides must land together or every routine starts reporting version drift.
+**If you changed anything under `pipeline/`** (the methodology PROMPT files), also bump `METHODOLOGY_VERSION` in `src/methodology.js` AND `ResearchMethodology::VERSION` in the backend repo (Code-to-Market/fierce-philanthropy) — the two ship synced copies of the same files, and scheduled routines compare the versions at runtime via `/api/research/parameters`. Both sides must land together or every routine starts reporting version drift. The server's `resources/pipeline/*.md` is the source of truth: `src/prompts.test.js` fails whenever a `pipeline/*/PROMPT.md` differs from it (line endings ignored), looking for the server checkout next to this repo or at `TFG_SERVER_PIPELINE_DIR`, and skips with a message when neither exists.
 
 The `files` field in `package.json` controls what ships. Keep it tight — node_modules, tests, docs, and `.git*` are excluded by default.
 
