@@ -23,6 +23,8 @@ Works with Claude Code, OpenCode, Cursor, Windsurf, Devin, and Qwen Code as an M
 
 To change cadence later, run `npx tokens-for-good init` again.
 
+init runs the package through `npx` but never writes `npx` into your harness config. When it runs from the npx cache it installs the exact version it is running under `~/.tokens-for-good/pkg` (`--ignore-scripts`) and points the MCP entry and hook at `node <that path>/src/cli.js`, so no project you open can substitute its own copy. Re-run init after upgrading to move the entries to the new version.
+
 ### Web-tool permissions
 
 Research means reading nonprofit websites and searching the web, so a run needs

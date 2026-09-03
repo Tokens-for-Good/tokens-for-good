@@ -72,7 +72,7 @@ The mental model most contributors need:
    - A SessionStart hook entry (Claude Code only for now)
    - The `/tfg` and `/tfg-schedule` skill files (Claude Code only for now)
    - `~/.tokens-for-good/state.json` with the chosen flow
-2. **The user opens the harness.** A SessionStart-style hook (or whatever the harness provides) runs `npx tokens-for-good session-start-hook`, which reads state.json and, on the first session after init, emits a JSON payload telling the AI to invoke `/tfg-schedule` or `/tfg`.
+2. **The user opens the harness.** A SessionStart-style hook (or whatever the harness provides) runs `node <absolute cli.js> session-start-hook`, which reads state.json and, on the first session after init, emits a JSON payload telling the AI to invoke `/tfg-schedule` or `/tfg`. Both the hook and the MCP entry bake in the absolute node binary and the absolute `cli.js` (from `~/.tokens-for-good/pkg` when init ran via `npx`, otherwise the install init ran from); a bare `npx tokens-for-good` would resolve project-first and let any repository's own `tokens-for-good` run in their place.
 3. **The AI invokes the skill.** Skills are Markdown instruction files the AI reads and follows. `/tfg-schedule` tells it to call the TFG MCP's `setup_automation` tool, extract the scheduled-research prompt, and invoke the harness's scheduling mechanism (Claude Code's `/schedule`, OpenCode's cron, Devin's recurring sessions, etc.).
 4. **Scheduled runs call the API directly**, not the MCP. The research agent uses `WebFetch` against the TFG HTTP endpoints so it can run on cloud infrastructure that has no local MCP access.
 
