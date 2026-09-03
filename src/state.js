@@ -21,6 +21,7 @@ const DEFAULT_STATE = {
   install_id: null,             // stable per-machine UUID sent as X-TFG-Install-Id header
   schedule_prompt_version: null, // e.g. 'v3.0-embed' — stamp of the routine prompt installed via /tfg-schedule; null = pre-embed (legacy) routine or no routine
   last_upgrade_nudge: null,     // ISO timestamp of the last legacy-routine upgrade nudge
+  routine_agent_id: null,       // id of the dedicated "routine" agent whose key setup_automation embedded in the scheduled prompt
 };
 
 export function loadState() {

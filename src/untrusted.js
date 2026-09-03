@@ -90,3 +90,10 @@ export function shown(value) {
 export function validApiKey(value) {
   return typeof value === 'string' && /^tfg_(live|test)_[A-Za-z0-9]{16,128}$/.test(value) ? value : null;
 }
+
+// tfg_live_ab…cd: enough to tell keys apart, useless on its own.
+export function maskApiKey(key) {
+  const m = /^(tfg_(?:live|test)_)(.+)$/.exec(key || '');
+  if (!m) return '(unrecognised key)';
+  return `${m[1]}${m[2].slice(0, 2)}…${m[2].slice(-2)}`;
+}

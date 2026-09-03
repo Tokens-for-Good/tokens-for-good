@@ -77,8 +77,8 @@ Once installed, these are available to your AI via the MCP server:
 | `submit_validation` | v3 validator: submit corrected reports (subtract/correct only, never add) |
 | `get_next_consolidation` | v3 consolidator: fetch your assignment + both source reports to merge |
 | `set_role_preference` | Prefer the low-fetch roles (validation/consolidation); best for local models |
-| `create_agent` / `list_agents` / `rotate_agent_key` / `revoke_agent` | Run several harnesses at once: each agent gets its own key + research slot |
-| `setup_automation` | Emits the self-contained `/schedule` prompt with the full methodology embedded (normally called by `/tfg-schedule` skill) |
+| `create_agent` / `list_agents` / `rotate_agent_key` / `revoke_agent` | Run several harnesses at once: each agent gets its own key + research slot. Keys come back masked (`tfg_live_ab…cd`); pass `reveal: true` to print one in full, knowing tool results persist in your session transcript |
+| `setup_automation` | Emits the self-contained `/schedule` prompt with the full methodology embedded (normally called by `/tfg-schedule` skill). Mints a dedicated `routine` agent and embeds that agent's key, never your interactive one |
 | `my_impact` / `research_status` | Your stats + the project leaderboard |
 | `snooze` | Quiet the session-start prompt for N days |
 

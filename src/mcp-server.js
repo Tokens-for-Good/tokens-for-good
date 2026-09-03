@@ -7,7 +7,7 @@ import { detectPlatform, isSchedulable, getAutomationInstructions } from './plat
 import { loadState, updateState, isSnoozed, snoozeDays, hasContributedToday, markContributed, markSetupComplete, recordSchedulePromptVersion, getOrCreateInstallId } from './state.js';
 import { readMethodology, METHODOLOGY_VERSION, SCHEDULE_PROMPT_VERSION } from './methodology.js';
 import { runPlanForAgent, runPlanPreviewForSetup, CLAIMED_ORG_REF } from './run-plan.js';
-import { untrustedData, cleanText, validId, validInt, validNumber, validDate, validToken, validApiKey, shown } from './untrusted.js';
+import { untrustedData, cleanText, validId, validInt, validNumber, validDate, validToken, validApiKey, maskApiKey, shown } from './untrusted.js';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -362,41 +362,46 @@ server.tool('list_agents', 'List your agents (concurrent workers). Each has its 
   }
 });
 
-server.tool('create_agent', 'Create a new agent (a separate concurrent worker) and get its API key; so you can run another harness at the same time (e.g. a local Qwen alongside Codex). Returns the key ONCE. Subject to your agent limit (default 2).', {
+// Every tool result is written to the session transcript on disk, so a key is
+// only printed in full when the caller asks for it.
+function keyLines(key, reveal, agentId) {
+  if (!key) return 'The server returned a key in an unexpected format; rotate it from the dashboard before using it.';
+  if (reveal) return `Key (shown once; it is now in this session's transcript, rotate it if that transcript is ever shared):\n${key}`;
+  return `Key: ${maskApiKey(key)} (masked; the full value was not printed and cannot be fetched later). When you are ready to configure the other harness, call rotate_agent_key with agent_id ${shown(agentId)} and reveal: true to mint a fresh key and print it.`;
+}
+
+server.tool('create_agent', 'Create a new agent (a separate concurrent worker) so you can run another harness at the same time (e.g. a local Qwen alongside Codex). Returns the new key MASKED; pass reveal: true to print it in full, once, knowing the value then sits in this session\'s transcript on disk. Subject to your agent limit (default 2).', {
   label: z.string().describe('A name for the new worker, e.g. "qwen-local".'),
   prefer_low_fetch_roles: z.boolean().optional().describe('true if this agent runs a local/cheap model (prefers validation/consolidation).'),
-}, async ({ label, prefer_low_fetch_roles }) => {
+  reveal: z.boolean().optional().describe('true to print the full key (it lands in the transcript). Default: masked.'),
+}, async ({ label, prefer_low_fetch_roles, reveal }) => {
   if (!client) return noClient();
   try {
     const result = await client.createAgent(label, !!prefer_low_fetch_roles);
-    const key = validApiKey(result?.api_key);
+    const agentId = validInt(result?.agent?.id);
     return text([
-      `Created agent (id ${shown(validInt(result?.agent?.id))}).`,
+      `Created agent (id ${shown(agentId)}).`,
       untrustedData({ label: result?.agent?.label }),
       '',
-      key
-        ? `Its API key (shown once; configure the other harness with it):\n${key}`
-        : 'The server returned a key in an unexpected format; rotate it from the dashboard before using it.',
+      keyLines(validApiKey(result?.api_key), !!reveal, agentId),
     ].join('\n'));
   } catch (err) {
     return text(errorText('Error', err));
   }
 });
 
-server.tool('rotate_agent_key', 'Rotate one of your agents\' API keys (get the id from list_agents). The old key stops working immediately; reconfigure that harness with the new key. Use if a key leaked.', {
+server.tool('rotate_agent_key', 'Rotate one of your agents\' API keys (get the id from list_agents). The old key stops working immediately; reconfigure that harness with the new key. Use if a key leaked. Returns the new key MASKED; pass reveal: true to print it in full, once, knowing the value then sits in this session\'s transcript on disk.', {
   agent_id: z.number().describe('The id of the agent to rotate (from list_agents).'),
-}, async ({ agent_id }) => {
+  reveal: z.boolean().optional().describe('true to print the full key (it lands in the transcript). Default: masked.'),
+}, async ({ agent_id, reveal }) => {
   if (!client) return noClient();
   try {
     const result = await client.rotateAgentKey(agent_id);
-    const key = validApiKey(result?.api_key);
     return text([
       `Rotated the key for agent ${agent_id}.`,
       untrustedData({ label: result?.label }),
       '',
-      key
-        ? `New key (shown once):\n${key}`
-        : 'The server returned a key in an unexpected format; rotate it from the dashboard before using it.',
+      keyLines(validApiKey(result?.api_key), !!reveal, agent_id),
     ].join('\n'));
   } catch (err) {
     return text(errorText('Error', err));
@@ -467,9 +472,55 @@ server.tool('setup_automation', 'Get the scheduled-research prompt + setup instr
   runs_per_day: z.number().int().min(1).max(15).optional().describe('For daily cadence: how many research runs per day (1-15). Defaults to 1.'),
 }, async ({ frequency, runs_per_day }) => {
   if (notInitialized()) return text(INIT_GUARD_MESSAGE);
-  const instructions = getAutomationInstructions(platform, frequency || 'daily', apiKey, runs_per_day || 1);
-  return text(instructions);
+  const cadence = frequency || 'daily';
+  const runs = runs_per_day || 1;
+
+  // OpenCode, Devin and Qwen Code drive the local MCP on a cron; only the
+  // cloud-hosted Claude Code routine needs a key inside its prompt.
+  if (!ROUTINE_EMBEDS_KEY.has(platform)) return text(getAutomationInstructions(platform, cadence, null, runs));
+  if (!client) return noClient();
+
+  let routine;
+  try {
+    routine = await routineApiKey();
+  } catch (err) {
+    return text([
+      errorText('Could not prepare a routine key', err),
+      `The scheduled routine needs its own agent (label "${ROUTINE_AGENT_LABEL}"); the key this session uses is never embedded. Free a slot with revoke_agent, or ask an admin to raise the agent limit, then call setup_automation again. Nothing was scheduled.`,
+    ].join('\n'));
+  }
+  if (!routine.apiKey) return text('Error: the server returned a routine key in an unexpected format; nothing was scheduled.');
+  updateState({ routine_agent_id: routine.agentId });
+
+  return text([
+    `Routine key: the prompt below embeds the key of a dedicated agent labelled "${ROUTINE_AGENT_LABEL}" (id ${shown(routine.agentId)}), not the key this session uses. That value lands in this session's transcript, which is why it is a separate key; rotate or revoke agent ${shown(routine.agentId)} to stop the routine without touching this session.`,
+    ...(routine.rotated ? [`An earlier "${ROUTINE_AGENT_LABEL}" agent already existed, so its key was rotated: the previous routine stops working now. Finish the /schedule step to replace it.`] : []),
+    '',
+    getAutomationInstructions(platform, cadence, routine.apiKey, runs),
+  ].join('\n'));
 });
+
+// The routine runs in the cloud without this MCP server, so some key has to
+// be in its prompt. It gets its own agent's key, never the interactive one: a
+// leaked transcript exposes only that key, and it can be rotated or revoked
+// on its own. Re-running setup rotates the existing routine agent (agent
+// slots are limited) rather than creating another.
+const ROUTINE_AGENT_LABEL = 'routine';
+const ROUTINE_EMBEDS_KEY = new Set(['claude-code', 'cursor', 'windsurf']);
+
+async function routineApiKey() {
+  const listed = await client.listAgents();
+  const existing = (listed?.agents || []).find(a => a?.label === ROUTINE_AGENT_LABEL);
+  if (existing) {
+    if (existing.is_current) {
+      throw new Error(`this MCP server is running on the "${ROUTINE_AGENT_LABEL}" agent's own key; configure the interactive session with a different agent's key (create_agent, then re-run init) before scheduling`);
+    }
+    const rotated = await client.rotateAgentKey(existing.id);
+    return { apiKey: validApiKey(rotated?.api_key), agentId: validInt(existing.id), rotated: true };
+  }
+  const created = await client.createAgent(ROUTINE_AGENT_LABEL, false);
+  return { apiKey: validApiKey(created?.api_key), agentId: validInt(created?.agent?.id), rotated: false };
+}
 
 server.tool('mark_setup_complete', 'Called by the /tfg-schedule skill after /schedule confirms (pass installed_schedule: true), or by the /tfg skill after a successful first submission. Flips local state so the SessionStart hook stops emitting first-session instructions. Idempotent; safe to call multiple times.', {
   installed_schedule: z.boolean().optional().describe('Pass true when a recurring /schedule routine was just created or updated — records the installed prompt version and lights the dashboard badge.'),

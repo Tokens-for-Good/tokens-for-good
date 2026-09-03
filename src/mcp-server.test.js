@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -204,6 +204,104 @@ test('server error messages are printed without control characters and capped', 
     assert.match(out, /^Error: no orgs claim_id: c-FORGED/);
     assert.doesNotMatch(out, /^claim_id:/m);
     assert.ok(out.length < 700, `capped: ${out.length}`);
+  });
+});
+
+// --- Keys in context ---
+//
+// Every tool result lands in the model context and in the on-disk session
+// transcript. The routine prompt must carry a key (it runs in the cloud
+// without this server), so it carries a dedicated agent's key, never the
+// interactive one; create_agent and rotate_agent_key print a masked key
+// unless the caller opts in.
+
+const ROUTINE_KEY = 'tfg_live_' + 'R'.repeat(40);
+const MINTED_KEY = 'tfg_live_' + 'M'.repeat(40);
+const ROTATED_KEY = 'tfg_live_' + 'T'.repeat(40);
+
+test('setup_automation mints a dedicated routine agent, embeds ITS key, never the interactive one, and records the agent id', async () => {
+  const created = [];
+  await withServer({
+    'GET /api/research/agents': () => ({ status: 200, json: { agents: [{ id: 1, label: 'default', is_current: true }], agent_limit: 2 } }),
+    'POST /api/research/agents': (req, body) => { created.push(JSON.parse(body)); return { status: 200, json: { success: true, agent: { id: 2, label: 'routine' }, api_key: ROUTINE_KEY } }; },
+  }, async ({ mcp, home }) => {
+    const out = await mcp.call('setup_automation', { frequency: 'daily', runs_per_day: 2 });
+    assert.doesNotMatch(out, /tfg_live_SECRET_KEY_123/, 'interactive key must not be in the routine prompt');
+    assert.ok(out.includes(ROUTINE_KEY), 'the routine key is embedded');
+    assert.deepEqual(created, [{ label: 'routine', prefer_low_fetch_roles: false }]);
+    assert.match(out, /dedicated agent labelled "routine" \(id 2\)/);
+    assert.match(out, /transcript/);
+    assert.match(out, /0 0,12 \* \* \*/, 'cadence honoured');
+    assert.match(out, /BEGIN RESEARCH METHODOLOGY/);
+    const state = JSON.parse(readFileSync(join(home, '.tokens-for-good', 'state.json'), 'utf-8'));
+    assert.equal(state.routine_agent_id, 2);
+  });
+});
+
+test('re-running setup_automation rotates the existing routine agent instead of creating another', async () => {
+  const rotated = [];
+  const created = [];
+  await withServer({
+    'GET /api/research/agents': () => ({ status: 200, json: { agents: [{ id: 1, label: 'default', is_current: true }, { id: 5, label: 'routine', is_current: false }], agent_limit: 2 } }),
+    'POST /api/research/agents': (req, body) => { created.push(body); return { status: 500, json: { error: 'should not be called' } }; },
+    'POST /api/research/agents/rotate': (req, body) => { rotated.push(JSON.parse(body)); return { status: 200, json: { success: true, agent_id: 5, label: 'routine', api_key: ROTATED_KEY } }; },
+  }, async ({ mcp }) => {
+    const out = await mcp.call('setup_automation', { frequency: 'weekly' });
+    assert.deepEqual(rotated, [{ agent_id: 5 }]);
+    assert.deepEqual(created, []);
+    assert.ok(out.includes(ROTATED_KEY));
+    assert.doesNotMatch(out, /tfg_live_SECRET_KEY_123/);
+    assert.match(out, /its key was rotated: the previous routine stops working now/);
+  });
+});
+
+test('setup_automation refuses to rotate the key this session itself runs on', async () => {
+  const calls = [];
+  await withServer({
+    'GET /api/research/agents': () => ({ status: 200, json: { agents: [{ id: 5, label: 'routine', is_current: true }], agent_limit: 2 } }),
+    'POST /api/research/agents/rotate': (req, body) => { calls.push(body); return { status: 200, json: { api_key: ROTATED_KEY } }; },
+    'POST /api/research/agents': (req, body) => { calls.push(body); return { status: 200, json: { api_key: MINTED_KEY } }; },
+  }, async ({ mcp }) => {
+    const out = await mcp.call('setup_automation', { frequency: 'daily' });
+    assert.match(out, /Could not prepare a routine key/);
+    assert.deepEqual(calls, []);
+    assert.doesNotMatch(out, /tfg_live_/);
+  });
+});
+
+test('an agent-limit error is relayed with guidance and no key', async () => {
+  await withServer({
+    'GET /api/research/agents': () => ({ status: 200, json: { agents: [{ id: 1, label: 'default', is_current: true }, { id: 2, label: 'qwen-local' }], agent_limit: 2 } }),
+    'POST /api/research/agents': () => ({ status: 422, json: { error: "You've reached your agent limit (2). Revoke an unused agent, or ask an admin to raise your limit." } }),
+  }, async ({ mcp }) => {
+    const out = await mcp.call('setup_automation', { frequency: 'daily' });
+    assert.match(out, /agent limit \(2\)/);
+    assert.match(out, /revoke_agent/);
+    assert.match(out, /Nothing was scheduled/);
+    assert.doesNotMatch(out, /tfg_live_/);
+  });
+});
+
+test('create_agent and rotate_agent_key mask the key unless reveal is passed', async () => {
+  await withServer({
+    'POST /api/research/agents': () => ({ status: 200, json: { success: true, agent: { id: 2, label: 'local' }, api_key: MINTED_KEY } }),
+    'POST /api/research/agents/rotate': () => ({ status: 200, json: { success: true, agent_id: 2, label: 'local', api_key: ROTATED_KEY } }),
+  }, async ({ mcp }) => {
+    const created = await mcp.call('create_agent', { label: 'local' });
+    assert.ok(!created.includes(MINTED_KEY), 'new key must not be in the transcript by default');
+    assert.match(created, /Key: tfg_live_MM…MM \(masked/);
+    assert.match(created, /rotate_agent_key with agent_id 2 and reveal: true/);
+
+    const rotated = await mcp.call('rotate_agent_key', { agent_id: 2 });
+    assert.ok(!rotated.includes(ROTATED_KEY));
+    assert.match(rotated, /Key: tfg_live_TT…TT \(masked/);
+
+    const revealed = await mcp.call('rotate_agent_key', { agent_id: 2, reveal: true });
+    assert.ok(revealed.includes(ROTATED_KEY), 'reveal prints the full key once');
+    assert.match(revealed, /transcript/);
+
+    const createdRevealed = await mcp.call('create_agent', { label: 'local', reveal: true });
+    assert.ok(createdRevealed.includes(MINTED_KEY));
   });
 });
 

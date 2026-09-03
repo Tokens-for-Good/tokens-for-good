@@ -17,7 +17,7 @@ Describe cadence by frequency only; keep token costs and dollar amounts out of e
 
 ## 2. Wire it up
 
-1. **Call the TFG MCP `setup_automation` tool** with `frequency` (`daily` or `weekly`) and, for daily, `runs_per_day`. It returns the full `/schedule` setup text: a Step 2 schedule line containing a cron expression, and a self-contained research prompt (methodology embedded) scoped to the user's API key.
+1. **Call the TFG MCP `setup_automation` tool** with `frequency` (`daily` or `weekly`) and, for daily, `runs_per_day`. It returns the full `/schedule` setup text: a Step 2 schedule line containing a cron expression, and a self-contained research prompt (methodology embedded) carrying the key of a dedicated `routine` agent the tool mints on the user's account (or rotates, when one already exists). The key the interactive session uses is never embedded; the routine can be stopped on its own by revoking that agent.
 
 2. **Extract the research prompt:** the block delimited by `---` lines. Pass it through verbatim; don't paraphrase or trim it — the embedded methodology sections are the point.
 
@@ -25,7 +25,7 @@ Describe cadence by frequency only; keep token costs and dollar amounts out of e
    - Schedule: the existing routine's cadence when upgrading (unless the user asked to change it), otherwise the cron expression from `setup_automation`'s Step 2 line.
    - Task description: the verbatim block from step 2.
 
-4. **Wait for `/schedule` to confirm success.** If it fails or the user cancels, stop here and tell the user; do NOT call `mark_setup_complete`.
+4. **Wait for `/schedule` to confirm success.** If it fails or the user cancels, stop here and tell the user; do NOT call `mark_setup_complete`. If `setup_automation` said an earlier routine key was rotated, also tell them the previous routine stopped working and that running `/tfg-schedule` again restores it.
 
 5. **On success, call the TFG MCP `mark_setup_complete` tool with `installed_schedule: true`.** This flips the user's local state so the SessionStart hook stops nudging, and records the installed prompt version so upgrade reminders go silent.
 
@@ -34,6 +34,7 @@ Describe cadence by frequency only; keep token costs and dollar amounts out of e
 ## If something goes wrong
 
 - **`setup_automation` returned an error about a missing API key** → tell the user to run `npx tokens-for-good init` in their terminal and re-open Claude Code.
+- **`setup_automation` returned an agent-limit error** → the account has no free agent slot for the `routine` agent. Show the user `list_agents` and offer to `revoke_agent` an unused one, then call `setup_automation` again.
 - **`/schedule` skill not available** → the user's Claude Code version may be too old; direct them to update.
 - **User declines the /schedule confirmation** → don't call `mark_setup_complete`. The hook will offer again next session.
 
