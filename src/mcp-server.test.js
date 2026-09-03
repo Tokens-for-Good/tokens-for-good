@@ -305,6 +305,57 @@ test('create_agent and rotate_agent_key mask the key unless reveal is passed', a
   });
 });
 
+// --- Init guard ---
+//
+// The guard used to test for state.json's existence, but the server created
+// that file at startup, so it never fired: a hand-written MCP config on a
+// cold machine could claim and mint a key-bearing routine prompt without the
+// consent copy init shows.
+
+test('a cold install is refused by claim_org and setup_automation, nothing reaches the API, and no state.json appears', async () => {
+  const home = tmpHome();
+  await withServer({
+    'POST /api/research/claim': () => ({ status: 200, json: { claim_id: 'c-1', org: { name: 'Acme', url: 'https://acme.org' }, expires_at: '2026-01-01T00:30:00Z' } }),
+    'GET /api/research/agents': () => ({ status: 200, json: { agents: [], agent_limit: 2 } }),
+    'POST /api/research/agents': () => ({ status: 200, json: { agent: { id: 2, label: 'routine' }, api_key: ROUTINE_KEY } }),
+  }, async ({ mcp, api }) => {
+    const claim = await mcp.call('claim_org', {});
+    const setup = await mcp.call('setup_automation', { frequency: 'daily' });
+    assert.match(claim, /setup isn't complete/);
+    assert.match(setup, /setup isn't complete/);
+    assert.deepEqual(api.calls, [], 'nothing reached the API before init');
+    assert.doesNotMatch(setup, /tfg_live_/);
+    assert.equal(existsSync(join(home, '.tokens-for-good', 'state.json')), false, 'the server wrote no state before init');
+  }, { home });
+});
+
+test('a state.json that init did not write (no intended_flow) still counts as not initialized', async () => {
+  const home = tmpHome();
+  mkdirSync(join(home, '.tokens-for-good'), { recursive: true });
+  writeFileSync(join(home, '.tokens-for-good', 'state.json'), JSON.stringify({ platform: 'claude-code', install_id: '00000000-0000-4000-8000-000000000000' }));
+  await withServer({
+    'POST /api/research/claim': () => ({ status: 200, json: { claim_id: 'c-1', org: { name: 'Acme', url: 'https://acme.org' } } }),
+  }, async ({ mcp, api }) => {
+    assert.match(await mcp.call('claim_org', {}), /setup isn't complete/);
+    assert.deepEqual(api.calls, []);
+  }, { home });
+});
+
+test('once init has run, startup records the platform and the install id', async () => {
+  const home = tmpHome();
+  mkdirSync(join(home, '.tokens-for-good'), { recursive: true });
+  writeFileSync(join(home, '.tokens-for-good', 'state.json'), JSON.stringify({ intended_flow: 'one_off' }));
+  await withServer({
+    'GET /api/research/impact': () => ({ status: 200, json: { contributor: { tier: 'new', total_orgs: 0, acceptance_rate: 0 }, claims: [] } }),
+  }, async ({ mcp, api }) => {
+    await mcp.call('my_impact', {});
+    const state = JSON.parse(readFileSync(join(home, '.tokens-for-good', 'state.json'), 'utf-8'));
+    assert.equal(state.platform, 'claude-code');
+    assert.match(state.install_id, /^[0-9a-f-]{36}$/);
+    assert.equal(api.calls[0].headers['x-tfg-install-id'], state.install_id, 'the id rides along on requests');
+  }, { home });
+});
+
 test('a bad FIERCE_API_URL is reported by keyed tools instead of a misleading missing-key message', async () => {
   const home = initializedHome();
   const transport = new StdioClientTransport({

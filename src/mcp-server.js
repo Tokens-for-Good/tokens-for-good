@@ -4,18 +4,16 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { ApiClient } from './api-client.js';
 import { detectPlatform, isSchedulable, getAutomationInstructions } from './platform.js';
-import { loadState, updateState, isSnoozed, snoozeDays, hasContributedToday, markContributed, markSetupComplete, recordSchedulePromptVersion, getOrCreateInstallId } from './state.js';
+import { loadState, updateState, isSnoozed, snoozeDays, hasContributedToday, markContributed, markSetupComplete, recordSchedulePromptVersion, getOrCreateInstallId, isInitialized } from './state.js';
 import { readMethodology, METHODOLOGY_VERSION, SCHEDULE_PROMPT_VERSION } from './methodology.js';
 import { runPlanForAgent, runPlanPreviewForSetup, CLAIMED_ORG_REF } from './run-plan.js';
 import { untrustedData, cleanText, validId, validInt, validNumber, validDate, validToken, validApiKey, maskApiKey, shown } from './untrusted.js';
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { homedir } from 'os';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PKG_VERSION = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8')).version;
-const STATE_FILE = join(homedir(), '.tokens-for-good', 'state.json');
 
 const INIT_GUARD_MESSAGE = `Tokens for Good setup isn't complete on this machine yet.
 
@@ -25,18 +23,25 @@ Tell the user to run this in their terminal (not here in the chat), then restart
 
 The init command asks them to choose a contribution cadence (daily / weekly / one-off) and wires up everything else automatically. It takes about 30 seconds.`;
 
-// Gate: only fires for genuinely cold installs where state.json is missing
-// entirely. Existing users; including those on the pre-0.4.0 schema; pass
-// through untouched. Init writes state.json on first successful completion,
-// so after that this never fires again.
+// Gate for claim_org and setup_automation. init is the only thing that
+// records intended_flow in state.json, so its absence means init never ran,
+// whatever else may have been written there (the old check looked for the
+// file itself, which this server created at startup, so it never fired).
 function notInitialized() {
-  return !existsSync(STATE_FILE);
+  return !isInitialized();
 }
 
 const apiKey = process.env.TFG_API_KEY;
 const platform = detectPlatform();
-updateState({ platform });
-const installId = getOrCreateInstallId();
+
+// No state writes before init has run: a hand-written MCP config on a cold
+// machine must not grow a state.json the user never consented to. Once init
+// has run, record the platform and make sure the install id exists.
+let installId = loadState().install_id;
+if (isInitialized()) {
+  updateState({ platform });
+  installId = getOrCreateInstallId();
+}
 
 let client = null;
 let clientError = 'TFG_API_KEY not set. Get your key at https://tokensforgood.ai/contribute';
