@@ -72,6 +72,26 @@ export async function runInit() {
     initial: detectedIdx,
   }, { onCancel });
 
+  // Step 2b: Cursor reads MCP config from the user level (~/.cursor/mcp.json)
+  // or from the project (<cwd>/.cursor/mcp.json). The project file is
+  // Cursor's shareable convention and would carry the key into the repo, so
+  // the user level is the default and a project choice is gitignored and
+  // called out.
+  let cursorScope = 'user';
+  if (platform === 'cursor') {
+    const { scope } = await prompts({
+      type: 'select',
+      name: 'scope',
+      message: 'Where should Cursor read the Tokens for Good entry from?',
+      choices: [
+        { title: 'User level (~/.cursor/mcp.json); recommended, never inside a repo', value: 'user' },
+        { title: `This project (${join(process.cwd(), '.cursor', 'mcp.json')}); holds your API key, gets gitignored`, value: 'project' },
+      ],
+      initial: 0,
+    }, { onCancel });
+    cursorScope = scope;
+  }
+
   // Step 3: Frequency (mandatory choice; this is the whole point of init)
   const { choice } = await prompts({
     type: 'select',
@@ -126,7 +146,7 @@ export async function runInit() {
 
   // Step 4: Preview + confirm
   console.log('\nAbout to write:');
-  const plans = planWrites(platform, allowWebTools);
+  const plans = planWrites(platform, allowWebTools, cursorScope);
   for (const p of plans) console.log(`  • ${p.label}`);
   console.log('');
 
@@ -145,11 +165,16 @@ export async function runInit() {
   const written = plans.filter(p => !p.runtime);
 
   const apiKeyTrimmed = apiKey.trim();
-  const { migratedLegacyEntry } = writeMcpConfig(platform, apiKeyTrimmed, cliPath);
+  const { migratedLegacyEntry, gitignore } = writeMcpConfig(platform, apiKeyTrimmed, cliPath, { cursorScope });
   console.log(`✓ ${written[0].label}`);
   if (migratedLegacyEntry) {
     console.log(`    moved the tokens-for-good entry out of ${homeRelative(legacyMcpJsonPath())}: Claude Code read that file as a`);
     console.log(`    per-project .mcp.json (approval prompt in every project under your home folder, no server elsewhere).`);
+  }
+  if (gitignore) {
+    console.log(`✓ ${written[1].label}${gitignore.added ? '' : ' (already listed)'}`);
+    console.log('    WARNING: that MCP file sits inside this project and holds your API key. Keep it out of');
+    console.log('    commits, shared folders and screenshots; re-run init and pick the user level to move it.');
   }
 
   if (platform === 'claude-code') {
@@ -194,17 +219,21 @@ export async function runInit() {
 
   // Closing message
   console.log('\n✓ Setup complete.\n');
-  printClosingGuidance(platform, intended_flow, intended_frequency, runs_per_day, allowWebTools);
+  printClosingGuidance(platform, intended_flow, intended_frequency, runs_per_day, allowWebTools, cursorScope);
 }
 
 // --- Planning (for preview + execute) ---
 
-function planWrites(platform, allowWebTools = false) {
+function planWrites(platform, allowWebTools = false, cursorScope = 'user') {
   const plans = [];
   if (isEphemeralInstall()) {
     plans.push({ runtime: true, label: `${homeRelative(privatePackageDir())}  (private copy of tokens-for-good@${PKG_VERSION}; the npx cache is temporary)` });
   }
-  plans.push({ label: `${mcpConfigPath(platform)}  (MCP server entry${platform === 'claude-code' ? ', user scope' : ''})` });
+  const projectLocal = platform === 'cursor' && cursorScope === 'project';
+  plans.push({ label: `${mcpConfigPath(platform, { cursorScope })}  (MCP server entry${platform === 'claude-code' ? ', user scope' : ''}${projectLocal ? '; PROJECT-LOCAL, holds your API key' : ''})` });
+  if (projectLocal) {
+    plans.push({ label: `${join(process.cwd(), '.gitignore')}  (add .cursor/mcp.json so the key is never committed)` });
+  }
   if (platform === 'claude-code') {
     plans.push({
       label: allowWebTools
@@ -228,8 +257,8 @@ function homeRelative(abs) {
   return abs.startsWith(homedir()) ? '~' + abs.slice(homedir().length).replace(/\\/g, '/') : abs;
 }
 
-function mcpConfigPath(platform) {
-  return homeRelative(absoluteMcpPath(platform));
+function mcpConfigPath(platform, opts = {}) {
+  return homeRelative(absoluteMcpPath(platform, opts));
 }
 
 function settingsPath()         { return homeRelative(join(homedir(), '.claude', 'settings.json')); }
@@ -371,8 +400,8 @@ function assertRuntimePath(cliPath) {
   if (!cliPath || !isAbsolute(cliPath)) throw new Error(`runtime path must be absolute, got ${cliPath}`);
 }
 
-function writeMcpConfig(platform, apiKey, cliPath) {
-  const abs = absoluteMcpPath(platform);
+function writeMcpConfig(platform, apiKey, cliPath, { cursorScope = 'user' } = {}) {
+  const abs = absoluteMcpPath(platform, { cursorScope });
   const cfg = readJsonOrEmpty(abs);
   const entry = mcpServerEntry(apiKey, cliPath);
 
@@ -391,7 +420,24 @@ function writeMcpConfig(platform, apiKey, cliPath) {
   writeJson(abs, cfg);
 
   const migratedLegacyEntry = platform === 'claude-code' ? migrateLegacyMcpJson() : false;
-  return { migratedLegacyEntry };
+  const gitignore = platform === 'cursor' && cursorScope === 'project'
+    ? ensureGitignoreEntry(join(process.cwd(), '.gitignore'), '.cursor/mcp.json')
+    : null;
+  return { migratedLegacyEntry, gitignore };
+}
+
+// Append `entry` to a .gitignore unless a line already covers it. Creates the
+// file when the project has none.
+export function ensureGitignoreEntry(path, entry) {
+  const existing = existsSync(path) ? readFileSync(path, 'utf-8') : '';
+  const listed = existing.split(/\r?\n/).some(line => {
+    const t = line.trim();
+    return t === entry || t === `/${entry}`;
+  });
+  if (listed) return { added: false };
+  const separator = existing.length === 0 || existing.endsWith('\n') ? '' : '\n';
+  writeFileSync(path, `${existing}${separator}${entry}\n`, 'utf-8');
+  return { added: true };
 }
 
 // Add or replace our entry, leaving every other key of the file alone. For
@@ -434,12 +480,14 @@ function legacyMcpJsonPath() {
   return join(homedir(), '.mcp.json');
 }
 
-export function absoluteMcpPath(platform) {
+export function absoluteMcpPath(platform, { cursorScope = 'user' } = {}) {
   switch (platform) {
     case 'opencode':
       return join(homedir(), '.config', 'opencode', 'opencode.json');
     case 'cursor':
-      return join(process.cwd(), '.cursor', 'mcp.json');
+      return cursorScope === 'project'
+        ? join(process.cwd(), '.cursor', 'mcp.json')
+        : join(homedir(), '.cursor', 'mcp.json');
     case 'windsurf':
       return join(homedir(), '.codeium', 'windsurf', 'mcp_config.json');
     case 'qwen-code':
@@ -567,7 +615,7 @@ function writeQwenCommand(name) {
 
 // --- Closing guidance ---
 
-function printClosingGuidance(platform, flow, freq, runsPerDay = 1, allowWebTools = false) {
+function printClosingGuidance(platform, flow, freq, runsPerDay = 1, allowWebTools = false, cursorScope = 'user') {
   const cadence = freq === 'daily' && runsPerDay > 1 ? `daily (${runsPerDay}× per day)` : freq;
   if (platform === 'claude-code') {
     if (flow === 'scheduled') {
@@ -623,7 +671,11 @@ function printClosingGuidance(platform, flow, freq, runsPerDay = 1, allowWebTool
     return;
   }
   // cursor, windsurf, devin
-  console.log(`MCP config written to ${mcpConfigPath(platform)}.`);
+  console.log(`MCP config written to ${mcpConfigPath(platform, { cursorScope })}.`);
+  if (platform === 'cursor' && cursorScope === 'project') {
+    console.log('That file is inside this project and holds your API key. It is listed in .gitignore now; keep it out');
+    console.log('of commits, shared folders and screenshots, or re-run init and pick the user level instead.');
+  }
   console.log(`Restart ${platform} and run: "Research a nonprofit org for Fierce Philanthropy."`);
   if (flow === 'scheduled') {
     console.log(`Scheduling on ${platform} requires platform-native setup; see setup_automation tool for details.`);

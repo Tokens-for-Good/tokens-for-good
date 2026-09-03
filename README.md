@@ -98,7 +98,8 @@ Have an idea to make TFG more secure or trustworthy? [Open an issue](https://git
 
 - **OpenCode:** `init` writes `~/.config/opencode/opencode.json` and prints a cron line you can paste into `crontab -e`.
 - **Qwen Code:** `init` writes `~/.qwen/settings.json` (preserving other keys) plus a `/tfg` slash command at `~/.qwen/commands/tfg.md`. For recurring runs, enable Qwen Code's experimental cron (`QWEN_CODE_ENABLE_CRON=1`) or use a system cron line.
-- **Cursor / Windsurf / Devin:** `init` writes the MCP config; automation requires platform-native scheduling.
+- **Cursor:** `init` writes the user-level `~/.cursor/mcp.json` by default. Choosing the project-level `.cursor/mcp.json` instead puts your API key inside the repo folder, so init adds that path to the project's `.gitignore` and says so; automation requires platform-native scheduling.
+- **Windsurf / Devin:** `init` writes the MCP config; automation requires platform-native scheduling.
 
 ## Contributing
 

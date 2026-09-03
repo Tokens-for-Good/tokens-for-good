@@ -137,6 +137,29 @@ test('the legacy ~/.mcp.json entry is removed; the file is reported empty only w
   assert.equal(init.removeLegacyEntry(null).removed, false);
 });
 
+test('Cursor defaults to the user-level file; the project file is opt-in', () => {
+  assert.equal(init.absoluteMcpPath('cursor'), join(HOME, '.cursor', 'mcp.json'));
+  assert.equal(init.absoluteMcpPath('cursor', { cursorScope: 'user' }), join(HOME, '.cursor', 'mcp.json'));
+  assert.equal(init.absoluteMcpPath('cursor', { cursorScope: 'project' }), join(process.cwd(), '.cursor', 'mcp.json'));
+});
+
+test('a .gitignore entry is appended once, creating the file when needed', () => {
+  const dir = join(HOME, 'gi');
+  mkdirSync(dir, { recursive: true });
+  const path = join(dir, '.gitignore');
+
+  assert.deepEqual(init.ensureGitignoreEntry(path, '.cursor/mcp.json'), { added: true });
+  assert.equal(readFileSync(path, 'utf-8'), '.cursor/mcp.json\n');
+
+  writeFileSync(path, 'node_modules/');
+  assert.deepEqual(init.ensureGitignoreEntry(path, '.cursor/mcp.json'), { added: true });
+  assert.equal(readFileSync(path, 'utf-8'), 'node_modules/\n.cursor/mcp.json\n', 'a missing trailing newline is handled');
+
+  assert.deepEqual(init.ensureGitignoreEntry(path, '.cursor/mcp.json'), { added: false });
+  writeFileSync(path, '/.cursor/mcp.json\n');
+  assert.deepEqual(init.ensureGitignoreEntry(path, '.cursor/mcp.json'), { added: false }, 'a rooted form counts');
+});
+
 test('a hook entry is recognised in both the old npx form and the new node form', () => {
   const oldForm = { matcher: '', hooks: [{ type: 'command', command: '"C:\\Program Files\\nodejs\\npx.cmd" -y tokens-for-good session-start-hook 2>/dev/null || true' }] };
   const newForm = { matcher: '', hooks: [{ type: 'command', command: init.hookCommand(init.cliPathFor(init.packageRoot())) }] };
@@ -212,4 +235,52 @@ test('init run inside a project that shadows the package writes entries that exe
   assert.equal(state.intended_flow, 'one_off');
   assert.ok(existsSync(join(HOME, '.claude', 'skills', 'tfg', 'SKILL.md')));
   assert.ok(lines.some(l => l.includes('Setup complete')), lines.join('\n'));
+});
+
+// The runs below follow the one above, so state.json exists and init opens
+// with its "Reconfigure?" question.
+test('Cursor at user scope writes ~/.cursor/mcp.json and nothing into the project', async () => {
+  const project = join(HOME, 'cursor-user-proj');
+  mkdirSync(project, { recursive: true });
+  const previousCwd = process.cwd();
+  process.chdir(project);
+  // reconfigure, apiKey, platform, cursor scope, cadence, write confirmation
+  prompts.inject([true, 'tfg_live_CURSOR1', 'cursor', 'user', 'weekly', true]);
+  let lines;
+  try {
+    lines = await captureLog(() => init.runInit());
+  } finally {
+    process.chdir(previousCwd);
+  }
+
+  const cfg = JSON.parse(readFileSync(join(HOME, '.cursor', 'mcp.json'), 'utf-8'));
+  assert.equal(cfg.mcpServers['tokens-for-good'].env.TFG_API_KEY, 'tfg_live_CURSOR1');
+  assert.equal(cfg.mcpServers['tokens-for-good'].command, process.execPath);
+  assert.ok(!existsSync(join(project, '.cursor')), 'nothing written into the project');
+  assert.ok(!existsSync(join(project, '.gitignore')));
+  assert.ok(!lines.some(l => l.includes('holds your API key')), 'no warning at user scope');
+});
+
+test('Cursor at project scope gitignores .cursor/mcp.json and warns in preview and closing text', async () => {
+  const project = join(HOME, 'cursor-proj');
+  mkdirSync(project, { recursive: true });
+  writeFileSync(join(project, '.gitignore'), 'node_modules/');
+  const previousCwd = process.cwd();
+  process.chdir(project);
+  prompts.inject([true, 'tfg_live_CURSOR2', 'cursor', 'project', 'one_off', true]);
+  let lines;
+  try {
+    lines = await captureLog(() => init.runInit());
+  } finally {
+    process.chdir(previousCwd);
+  }
+
+  const cfg = JSON.parse(readFileSync(join(project, '.cursor', 'mcp.json'), 'utf-8'));
+  assert.equal(cfg.mcpServers['tokens-for-good'].env.TFG_API_KEY, 'tfg_live_CURSOR2');
+  assert.equal(readFileSync(join(project, '.gitignore'), 'utf-8'), 'node_modules/\n.cursor/mcp.json\n');
+  const text = lines.join('\n');
+  assert.match(text, /PROJECT-LOCAL, holds your API key/, 'preview names the risk');
+  assert.match(text, /add \.cursor\/mcp\.json so the key is never committed/, 'preview lists the .gitignore write');
+  assert.match(text, /WARNING: that MCP file sits inside this project/);
+  assert.match(text, /listed in \.gitignore now/, 'closing guidance repeats it');
 });
