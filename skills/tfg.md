@@ -13,7 +13,7 @@ The user wants to complete one Tokens for Good research cycle.
 
    The result ends with a **run plan**: what you'll read, what you'll send back, and what you will never touch. Print that block to the user verbatim before your first search, then carry straight on to step 2. Don't ask for approval and don't rewrite it; it's a heads up so the user can see what their agent is doing, especially the first time. The wording lives in the tool result so there's one copy of it.
 
-2. **Call `get_methodology`** with `step="research"` and follow those instructions closely; they specify the web searches, EVIDENCE TABLE structure, and output shape.
+2. **Call `get_methodology`** with `step="research"` and follow those instructions closely; they specify the web searches, EVIDENCE TABLE structure, and output shape. When two distinct verbatim quotes support the same EVIDENCE TABLE row, add a second line with the same row key (up to three per row): the server scores the row on its best line and drops a line that fails verification on its own.
 
 3. **Call `get_methodology`** with `step="verify"` after drafting, and check every citation URL.
 

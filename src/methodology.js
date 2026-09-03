@@ -12,6 +12,8 @@ export const PIPELINE_DIR = join(__dirname, '..', 'pipeline');
 // sync with ResearchMethodology::VERSION on the backend — the two repos ship
 // synced copies of the same files, and the server compares this value at
 // submit time (see /api/research/parameters).
+// Not bumped for best-of-N candidate rows (2026-09, roadmap #26): additive,
+// and a single-line-per-row table from an older routine stays valid.
 export const METHODOLOGY_VERSION = '3.0';
 
 // prompt_version stamp for reports produced by the embedded scheduled prompt

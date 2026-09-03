@@ -17,7 +17,7 @@ The `/tfg-consolidate` skill (or the `get_next_consolidation` MCP tool) returns:
 
 For each row (a1, a2, a3, b, c, d, e, f), compare the two source reports' quotes and decide:
 
-- **Both filled with compatible evidence** → take the stronger quote (longer, more specific, cited to the exact page rather than an overview).
+- **Both filled with compatible evidence** → put the stronger quote first (longer, more specific, cited to the exact page rather than an overview). When the two quotes are distinct, keep the other as a second line with the same row key (up to three lines per row, one quote and one URL per line): the row scores on its best line, and a line that fails citation verification drops on its own, so the row keeps the other.
 - **Only one filled** → use that one.
 - **Both blank** → leave it blank. A blank is the honest answer when the evidence doesn't exist.
 - **They disagree** (different URLs, materially different evidence on the same row) → take the better-supported one *and* add the row key to your `disagreement_rows`. The hierarchy when picking the better one:
@@ -29,9 +29,9 @@ If you flag **≥3 rows** as disagreements, the server automatically spawns a th
 
 ## What the server does with your table after you submit
 
-The server keeps a copy of your merged EVIDENCE TABLE, then compares it row by row with the source tables using the same deterministic raters that produce the score. When a source row rates strictly higher than yours (green over yellow over gray or blank), the server lifts that source row (quote, URL, and name, verbatim) into the merged table. Rows a1 to a3 move together as one goals block, so the three goal rows always come from a single researcher. Rows the citation check has marked fabricated by the time you submit stay out. Ties keep your row. If you deliberately keep a lower-rated row because the higher-rated one is inaccurate (a misquoted number, the wrong organization), add that row key to `disagreement_rows` so a reviewer sees the choice: the server still lifts the higher-rated row, and the reviewer decides.
+The server keeps a copy of your merged EVIDENCE TABLE, then merges it row by row with the source tables using the same deterministic raters that produce the score. A row may carry up to three candidate lines (the same row key repeated). For rows b to f the server unions your lines with the sources' lines, drops exact duplicates, skips any source line the citation check has marked fabricated by the time you submit, orders them best-rated first (green over yellow) with your lines ahead on ties, and keeps the top three; a source line that rates strictly higher than your best becomes the row's first line (quote, URL, and name, verbatim). Rows a1 to a3 move together as one goals block from a single researcher, lifted only when that block satisfies strictly more goal checks (goal stated, number, year) than yours. Every line is verified against its page separately, and a line that fails drops on its own, so the row keeps its other lines. If you deliberately keep a lower-rated line because the higher-rated one is inaccurate (a misquoted number, the wrong organization), add that row key to `disagreement_rows` so a reviewer sees the choice: the server still adds the higher-rated line, and the reviewer decides.
 
-`get_next_consolidation` shows each source report's `row_ratings` and `weighted_score`, so you can see which researcher's row rates higher before you merge. Match your table and your narrative to the best-rated evidence across the sources: that is what will score, and it keeps your prose consistent with the table the server stores. The submit response lists any rows the server lifted under `merge`.
+`get_next_consolidation` shows each source report's `row_ratings` and `weighted_score`, so you can see which researcher's row rates higher before you merge. Match your table and your narrative to the best-rated evidence across the sources: that is what will score, and it keeps your prose consistent with the table the server stores. The submit response lists any rows the server lifted and any alternate lines it added under `merge`.
 
 ## The Merged Report Structure
 
@@ -42,7 +42,7 @@ The report must contain:
 - `**Methodology:** Todd Manwaring's Social Impact Evaluation Framework (v3; consolidated)`
 - PROMPT 1, 2, 3, 4, 5 (copy/paste the stronger versions)
 - Sections 1 through 7 (copy/paste the stronger versions)
-- A single merged **EVIDENCE TABLE** (your consolidation work, 8 rows: a1–a3, b, c, d, e, f)
+- A single merged **EVIDENCE TABLE** (your consolidation work, 8 row keys: a1–a3, b, c, d, e, f, each on one to three lines)
 - SOURCES section listing every URL cited inline
 
 The validator requires: ≥1500 words, ≥5 inline citations across ≥3 distinct domains, no `example.com` placeholders, no repeated-sentence stubs. Both source reports should already comfortably pass these; if neither does, that's a signal to flag disagreement on the affected rows.

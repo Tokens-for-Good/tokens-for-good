@@ -143,6 +143,7 @@ The score is computed deterministically by code from this table, not by you. Lea
 - Use the real URL of the specific page that contains the quote. Not the org homepage. Not `example.com`.
 - A blank row is the correct answer when the evidence doesn't exist. Do not invent.
 - One row, one quote, one URL. Don't bundle two facts under one citation.
+- **Two or three quotes can back one row.** When two distinct quotes (or two different sources) support the same row, add a second line with the same row key, up to three lines per key, one quote and one URL per line, each still verbatim. The server scores the row on its best line, checks every line against its page separately, and drops a line that fails verification on its own, so the row keeps its other quotes. Lines beyond the third are ignored. Example, two lines with the same key: `c | "27% reduction in under-five mortality" | url-of-impact-report` and, on the next line, `c | "under-five mortality fell from 82 to 60 per 1,000 live births" | url-of-independent-evaluation`.
 - For e and f: if the design is "self-reported survey of current borrowers" or "before/after with no comparison group", leave the row blank. Those are not counterfactual evidence.
 
 #### SOURCES
@@ -174,6 +175,7 @@ Run these checks before submitting. They are not optional.
 - [ ] All 5 prompt tables present and complete (20 rows each)
 - [ ] All 7 summary sections present with substantive content
 - [ ] EVIDENCE TABLE has all 8 rows (a1, a2, a3, b, c, d, e, f); values may be blank where no evidence was found
+- [ ] A row with more than one supporting quote uses one line per quote (same row key, at most three lines), each verbatim with its own URL
 - [ ] SOURCES section lists every URL cited inline
 
 **Citations:**

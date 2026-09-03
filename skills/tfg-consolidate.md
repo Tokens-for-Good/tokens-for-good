@@ -18,7 +18,7 @@ The user wants to consolidate a pair of independent research reports into one me
 2. **Read both source reports closely.** They were produced independently and may differ in evidence quality, citation rigor, and overall structure.
 
 3. **Merge the EVIDENCE TABLE row by row** (a1, a2, a3, b, c, d, e, f). For each row:
-   - If both researchers filled the row with compatible evidence, take the stronger quote (longer, more specific, cites the exact page rather than an overview).
+   - If both researchers filled the row with compatible evidence, put the stronger quote first (longer, more specific, cites the exact page rather than an overview). When the two quotes are distinct, keep the other as a second line with the same row key (up to three lines per row, one quote and one URL per line): the row scores on its best line, and a line that fails citation verification drops on its own.
    - If only one filled the row, use that one's quote.
    - If both left it blank, leave it blank; that is an honest signal that the evidence doesn't exist.
    - If they materially disagree (different URLs, different evidence on the same row), take the better-supported one using this hierarchy:
