@@ -137,8 +137,42 @@ Scale: 750K+ US nonprofits to research.`,
 // Every tool result has the same shape: constant instruction text, structural
 // lines printed from validated fields only, and at most one `data` line that
 // carries whatever free text the server relayed (see untrusted.js).
+//
+// Every tool carries MCP annotations for hosts that read them, and the
+// state-changing ones carry the _meta flag Claude Code honours: it forces an
+// explicit approval on every call even under an `mcp__tokens-for-good__*`
+// allow rule, so an instruction injected through a researched page cannot
+// revoke an agent, rotate or mint a key, or submit under the user's name
+// without a prompt. The annotations are informational on other hosts.
+const CONFIRM = { 'anthropic/requiresUserInteraction': true };
+const TOOL_HINTS = {
+  claim_org:              { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+  get_methodology:        { readOnlyHint: true,  destructiveHint: false, idempotentHint: true,  openWorldHint: false },
+  submit_report:          { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true,  _meta: CONFIRM },
+  get_next_consolidation: { readOnlyHint: false, destructiveHint: false, idempotentHint: true,  openWorldHint: true },
+  get_next_validation:    { readOnlyHint: false, destructiveHint: false, idempotentHint: true,  openWorldHint: true },
+  submit_validation:      { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true,  _meta: CONFIRM },
+  set_role_preference:    { readOnlyHint: false, destructiveHint: false, idempotentHint: true,  openWorldHint: true },
+  list_agents:            { readOnlyHint: true,  destructiveHint: false, idempotentHint: true,  openWorldHint: true },
+  create_agent:           { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true,  _meta: CONFIRM },
+  rotate_agent_key:       { readOnlyHint: false, destructiveHint: true,  idempotentHint: false, openWorldHint: true,  _meta: CONFIRM },
+  revoke_agent:           { readOnlyHint: false, destructiveHint: true,  idempotentHint: true,  openWorldHint: true,  _meta: CONFIRM },
+  research_status:        { readOnlyHint: true,  destructiveHint: false, idempotentHint: true,  openWorldHint: true },
+  my_impact:              { readOnlyHint: true,  destructiveHint: false, idempotentHint: true,  openWorldHint: true },
+  setup_guide:            { readOnlyHint: true,  destructiveHint: false, idempotentHint: true,  openWorldHint: false },
+  // Mints or rotates the routine agent's key, so it needs the same approval.
+  setup_automation:       { readOnlyHint: false, destructiveHint: true,  idempotentHint: false, openWorldHint: true,  _meta: CONFIRM },
+  mark_setup_complete:    { readOnlyHint: false, destructiveHint: false, idempotentHint: true,  openWorldHint: true },
+  snooze:                 { readOnlyHint: false, destructiveHint: false, idempotentHint: true,  openWorldHint: false },
+};
 
-server.tool('claim_org', 'Claim the next available nonprofit org to research.', {
+function tool(name, description, inputSchema, cb) {
+  if (!TOOL_HINTS[name]) throw new Error(`tool ${name} has no entry in TOOL_HINTS`);
+  const { _meta, ...annotations } = TOOL_HINTS[name];
+  return server.registerTool(name, { description, inputSchema, annotations, ...(_meta ? { _meta } : {}) }, cb);
+}
+
+tool('claim_org', 'Claim the next available nonprofit org to research.', {
   platform: z.string().optional().describe('Your platform (claude-code, opencode, cursor, windsurf, devin)'),
 }, async ({ platform: plat }) => {
   if (notInitialized()) return text(INIT_GUARD_MESSAGE);
@@ -175,7 +209,7 @@ server.tool('claim_org', 'Claim the next available nonprofit org to research.', 
   }
 });
 
-server.tool('get_methodology', 'Get the full instructions for a pipeline step: research (the v3 EVIDENCE TABLE flow), verify, humanize, validate (prune unsupported evidence from two reports using cached page text), or consolidate (the v3 dual-research merge step).', {
+tool('get_methodology', 'Get the full instructions for a pipeline step: research (the v3 EVIDENCE TABLE flow), verify, humanize, validate (prune unsupported evidence from two reports using cached page text), or consolidate (the v3 dual-research merge step).', {
   step: z.enum(['research', 'verify', 'humanize', 'validate', 'consolidate']).describe('Which pipeline step to get instructions for'),
 }, async ({ step }) => {
   const content = readMethodology(step);
@@ -185,7 +219,7 @@ server.tool('get_methodology', 'Get the full instructions for a pipeline step: r
   return text(content);
 });
 
-server.tool('submit_report', 'Submit a completed research report (or a consolidated v3 report) for a claim you own. You MUST include estimated_tokens. For consolidation claims, also pass disagreement_rows.', {
+tool('submit_report', 'Submit a completed research report (or a consolidated v3 report) for a claim you own. You MUST include estimated_tokens. For consolidation claims, also pass disagreement_rows.', {
   claim_id: z.string().describe('The claim ID from claim_org or get_next_consolidation'),
   report_markdown: z.string().describe('The full research report in markdown'),
   estimated_tokens: z.number().describe('Estimated total tokens used: count web searches (~1K each), web fetches (~2-5K each), report output (~4 tokens/word), plus ~10K overhead'),
@@ -214,7 +248,7 @@ server.tool('submit_report', 'Submit a completed research report (or a consolida
   }
 });
 
-server.tool('get_next_consolidation', 'Get your assigned v3 consolidation: the org plus both independent source reports to merge into one canonical EVIDENCE TABLE. Returns 204-style "no assignments" when nothing is queued for you.', {}, async () => {
+tool('get_next_consolidation', 'Get your assigned v3 consolidation: the org plus both independent source reports to merge into one canonical EVIDENCE TABLE. Returns 204-style "no assignments" when nothing is queued for you.', {}, async () => {
   if (!client) return noClient();
 
   try {
@@ -253,7 +287,7 @@ server.tool('get_next_consolidation', 'Get your assigned v3 consolidation: the o
   }
 });
 
-server.tool('get_next_validation', 'Get your assigned v3 validation: both researchers\' reports, the server\'s deterministic citation verdicts, and the cached text of every page they cite. You validate using ONLY that cached text (no web fetches), pruning unsupported/fabricated EVIDENCE TABLE rows. Returns "no assignments" when nothing is queued for you.', {}, async () => {
+tool('get_next_validation', 'Get your assigned v3 validation: both researchers\' reports, the server\'s deterministic citation verdicts, and the cached text of every page they cite. You validate using ONLY that cached text (no web fetches), pruning unsupported/fabricated EVIDENCE TABLE rows. Returns "no assignments" when nothing is queued for you.', {}, async () => {
   if (!client) return noClient();
 
   try {
@@ -299,7 +333,7 @@ server.tool('get_next_validation', 'Get your assigned v3 validation: both resear
   }
 });
 
-server.tool('submit_validation', 'Submit a validation: corrected ("validated") versions of the source reports. You may only SUBTRACT unsupported/fabricated EVIDENCE TABLE rows or CORRECT a quote to match its cited page; never ADD new evidence. Provide full corrected markdown for each report you changed; omit reports you left unchanged.', {
+tool('submit_validation', 'Submit a validation: corrected ("validated") versions of the source reports. You may only SUBTRACT unsupported/fabricated EVIDENCE TABLE rows or CORRECT a quote to match its cited page; never ADD new evidence. Provide full corrected markdown for each report you changed; omit reports you left unchanged.', {
   claim_id: z.string().describe('Your validation claim_id from get_next_validation'),
   validated_reports: z.array(z.object({
     claim_id: z.string().describe('A source report\'s claim_id'),
@@ -332,7 +366,7 @@ server.tool('submit_validation', 'Submit a validation: corrected ("validated") v
   }
 });
 
-server.tool('set_role_preference', 'Set whether THIS agent prefers the low-fetch roles (validation & consolidation). Turn it on for a local/cheap model: the agent gets those no-scrape assignments first and waits instead of auto-starting an expensive research run when none is queued.', {
+tool('set_role_preference', 'Set whether THIS agent prefers the low-fetch roles (validation & consolidation). Turn it on for a local/cheap model: the agent gets those no-scrape assignments first and waits instead of auto-starting an expensive research run when none is queued.', {
   prefer_low_fetch_roles: z.boolean().describe('true = prefer validation/consolidation (best for local models); false = also do fresh research.'),
 }, async ({ prefer_low_fetch_roles }) => {
   if (!client) return noClient();
@@ -347,7 +381,7 @@ server.tool('set_role_preference', 'Set whether THIS agent prefers the low-fetch
   }
 });
 
-server.tool('list_agents', 'List your agents (concurrent workers). Each has its own key + role preference; the one you call as is is_current. Also returns your agent_limit.', {}, async () => {
+tool('list_agents', 'List your agents (concurrent workers). Each has its own key + role preference; the one you call as is is_current. Also returns your agent_limit.', {}, async () => {
   if (!client) return noClient();
   try {
     const result = await client.listAgents();
@@ -375,7 +409,7 @@ function keyLines(key, reveal, agentId) {
   return `Key: ${maskApiKey(key)} (masked; the full value was not printed and cannot be fetched later). When you are ready to configure the other harness, call rotate_agent_key with agent_id ${shown(agentId)} and reveal: true to mint a fresh key and print it.`;
 }
 
-server.tool('create_agent', 'Create a new agent (a separate concurrent worker) so you can run another harness at the same time (e.g. a local Qwen alongside Codex). Returns the new key MASKED; pass reveal: true to print it in full, once, knowing the value then sits in this session\'s transcript on disk. Subject to your agent limit (default 2).', {
+tool('create_agent', 'Create a new agent (a separate concurrent worker) so you can run another harness at the same time (e.g. a local Qwen alongside Codex). Returns the new key MASKED; pass reveal: true to print it in full, once, knowing the value then sits in this session\'s transcript on disk. Subject to your agent limit (default 2).', {
   label: z.string().describe('A name for the new worker, e.g. "qwen-local".'),
   prefer_low_fetch_roles: z.boolean().optional().describe('true if this agent runs a local/cheap model (prefers validation/consolidation).'),
   reveal: z.boolean().optional().describe('true to print the full key (it lands in the transcript). Default: masked.'),
@@ -395,7 +429,7 @@ server.tool('create_agent', 'Create a new agent (a separate concurrent worker) s
   }
 });
 
-server.tool('rotate_agent_key', 'Rotate one of your agents\' API keys (get the id from list_agents). The old key stops working immediately; reconfigure that harness with the new key. Use if a key leaked. Returns the new key MASKED; pass reveal: true to print it in full, once, knowing the value then sits in this session\'s transcript on disk.', {
+tool('rotate_agent_key', 'Rotate one of your agents\' API keys (get the id from list_agents). The old key stops working immediately; reconfigure that harness with the new key. Use if a key leaked. Returns the new key MASKED; pass reveal: true to print it in full, once, knowing the value then sits in this session\'s transcript on disk.', {
   agent_id: z.number().describe('The id of the agent to rotate (from list_agents).'),
   reveal: z.boolean().optional().describe('true to print the full key (it lands in the transcript). Default: masked.'),
 }, async ({ agent_id, reveal }) => {
@@ -413,7 +447,7 @@ server.tool('rotate_agent_key', 'Rotate one of your agents\' API keys (get the i
   }
 });
 
-server.tool('revoke_agent', 'Permanently revoke one of your agents (get the id from list_agents). Its key stops working and the slot frees up. You cannot revoke your only agent.', {
+tool('revoke_agent', 'Permanently revoke one of your agents (get the id from list_agents). Its key stops working and the slot frees up. You cannot revoke your only agent.', {
   agent_id: z.number().describe('The id of the agent to revoke (from list_agents).'),
 }, async ({ agent_id }) => {
   if (!client) return noClient();
@@ -425,7 +459,7 @@ server.tool('revoke_agent', 'Permanently revoke one of your agents (get the id f
   }
 });
 
-server.tool('research_status', 'See the overall Tokens for Good project progress and leaderboard.', {}, async () => {
+tool('research_status', 'See the overall Tokens for Good project progress and leaderboard.', {}, async () => {
   try {
     const clientForStatus = client || new ApiClient('public', { version: PKG_VERSION, platform, installId }); // Status is public
     const result = await clientForStatus.getStatus();
@@ -440,7 +474,7 @@ server.tool('research_status', 'See the overall Tokens for Good project progress
   }
 });
 
-server.tool('my_impact', 'See your personal contribution stats, tier, and history.', {}, async () => {
+tool('my_impact', 'See your personal contribution stats, tier, and history.', {}, async () => {
   if (!client) return noClient();
 
   try {
@@ -468,11 +502,11 @@ server.tool('my_impact', 'See your personal contribution stats, tier, and histor
   }
 });
 
-server.tool('setup_guide', 'Get setup instructions for Tokens for Good. Use this if the user needs help with installation, API keys, or configuration.', {}, async () => {
+tool('setup_guide', 'Get setup instructions for Tokens for Good. Use this if the user needs help with installation, API keys, or configuration.', {}, async () => {
   return text(NO_KEY_INSTRUCTIONS);
 });
 
-server.tool('setup_automation', 'Get the scheduled-research prompt + setup instructions for the user\'s platform. Usually called by the /tfg-schedule skill (which extracts the prompt and invokes /schedule). Safe to call directly too; returns human-readable instructions.', {
+tool('setup_automation', 'Get the scheduled-research prompt + setup instructions for the user\'s platform. Usually called by the /tfg-schedule skill (which extracts the prompt and invokes /schedule). Safe to call directly too; returns human-readable instructions.', {
   frequency: z.enum(['daily', 'weekly']).optional().describe('How often to contribute'),
   runs_per_day: z.number().int().min(1).max(15).optional().describe('For daily cadence: how many research runs per day (1-15). Defaults to 1.'),
 }, async ({ frequency, runs_per_day }) => {
@@ -527,7 +561,7 @@ async function routineApiKey() {
   return { apiKey: validApiKey(created?.api_key), agentId: validInt(created?.agent?.id), rotated: false };
 }
 
-server.tool('mark_setup_complete', 'Called by the /tfg-schedule skill after /schedule confirms (pass installed_schedule: true), or by the /tfg skill after a successful first submission. Flips local state so the SessionStart hook stops emitting first-session instructions. Idempotent; safe to call multiple times.', {
+tool('mark_setup_complete', 'Called by the /tfg-schedule skill after /schedule confirms (pass installed_schedule: true), or by the /tfg skill after a successful first submission. Flips local state so the SessionStart hook stops emitting first-session instructions. Idempotent; safe to call multiple times.', {
   installed_schedule: z.boolean().optional().describe('Pass true when a recurring /schedule routine was just created or updated — records the installed prompt version and lights the dashboard badge.'),
 }, async ({ installed_schedule }) => {
   markSetupComplete();
@@ -560,7 +594,7 @@ server.tool('mark_setup_complete', 'Called by the /tfg-schedule skill after /sch
   return text('Marked setup complete. The SessionStart hook will go silent from the next session.');
 });
 
-server.tool('snooze', 'Snooze Tokens for Good reminders. Call this when the user says to remind them tomorrow, next week, or in N days.', {
+tool('snooze', 'Snooze Tokens for Good reminders. Call this when the user says to remind them tomorrow, next week, or in N days.', {
   days: z.number().int().min(1).max(365).describe('Days to snooze (1 = tomorrow, 7 = next week)'),
 }, async ({ days }) => {
   snoozeDays(days);

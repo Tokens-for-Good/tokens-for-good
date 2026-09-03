@@ -82,6 +82,8 @@ Once installed, these are available to your AI via the MCP server:
 | `my_impact` / `research_status` | Your stats + the project leaderboard |
 | `snooze` | Quiet the session-start prompt for N days |
 
+**Allowlisting.** Every tool is registered with MCP annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`) for hosts that read them. On Claude Code, `submit_report`, `submit_validation`, `create_agent`, `rotate_agent_key`, `revoke_agent` and `setup_automation` (which mints the routine key) additionally carry `_meta["anthropic/requiresUserInteraction"]`, so they ask for approval on every call even under an `mcp__tokens-for-good__*` allow rule; an instruction injected through a researched page cannot revoke an agent, mint or rotate a key, or submit under your name without a prompt. The read-only tools (`get_methodology`, `list_agents`, `research_status`, `my_impact`, `setup_guide`) and the claim/queue tools are safe to allowlist wholesale.
+
 ## Security model
 
 Before it starts researching, your agent prints a **run plan**: the org it claimed, the public sources it will read, the report it will send back, and what it will never touch (your files, your other MCP servers or accounts, your browser, anything that spends money). It shows the plan and proceeds; it doesn't stop for approval. A research run needs web search, web fetch, and curl to our API, and nothing else.

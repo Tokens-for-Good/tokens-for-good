@@ -305,6 +305,47 @@ test('create_agent and rotate_agent_key mask the key unless reveal is passed', a
   });
 });
 
+// --- Annotations ---
+
+test('state-changing tools carry the Claude Code approval flag and every tool carries honest annotations', async () => {
+  await withServer({}, async ({ mcp }) => {
+    const { tools } = await mcp.client.listTools();
+    const byName = Object.fromEntries(tools.map(t => [t.name, t]));
+    const names = Object.keys(byName).sort();
+    assert.deepEqual(names, [
+      'claim_org', 'create_agent', 'get_methodology', 'get_next_consolidation', 'get_next_validation', 'list_agents',
+      'mark_setup_complete', 'my_impact', 'research_status', 'revoke_agent', 'rotate_agent_key', 'set_role_preference',
+      'setup_automation', 'setup_guide', 'snooze', 'submit_report', 'submit_validation',
+    ]);
+
+    for (const t of tools) {
+      for (const hint of ['readOnlyHint', 'destructiveHint', 'idempotentHint', 'openWorldHint']) {
+        assert.equal(typeof t.annotations?.[hint], 'boolean', `${t.name} sets ${hint}`);
+      }
+    }
+
+    const mustConfirm = ['revoke_agent', 'rotate_agent_key', 'create_agent', 'submit_report', 'submit_validation', 'setup_automation'];
+    for (const name of mustConfirm) {
+      assert.equal(byName[name]._meta?.['anthropic/requiresUserInteraction'], true, `${name} requires user interaction`);
+      assert.equal(byName[name].annotations.readOnlyHint, false);
+    }
+    for (const name of names.filter(n => !mustConfirm.includes(n))) {
+      assert.equal(byName[name]._meta?.['anthropic/requiresUserInteraction'], undefined, `${name} runs without a forced prompt`);
+    }
+
+    for (const name of ['get_methodology', 'list_agents', 'research_status', 'my_impact', 'setup_guide']) {
+      assert.equal(byName[name].annotations.readOnlyHint, true, `${name} is read-only`);
+      assert.equal(byName[name].annotations.destructiveHint, false);
+    }
+    for (const name of ['revoke_agent', 'rotate_agent_key']) {
+      assert.equal(byName[name].annotations.destructiveHint, true, `${name} is destructive`);
+    }
+    assert.equal(byName.get_methodology.annotations.openWorldHint, false, 'local-only tools say so');
+    assert.deepEqual(Object.keys(byName.submit_report.inputSchema.properties).sort(), ['claim_id', 'disagreement_rows', 'estimated_tokens', 'model_used', 'no_evidence', 'prompt_version', 'report_markdown'], 'input schemas survive the registerTool switch');
+    assert.deepEqual(Object.keys(byName.create_agent.inputSchema.properties).sort(), ['label', 'prefer_low_fetch_roles', 'reveal']);
+  });
+});
+
 // --- Init guard ---
 //
 // The guard used to test for state.json's existence, but the server created
