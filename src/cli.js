@@ -47,39 +47,43 @@ if (args.includes('-v') || args.includes('--version')) {
 } else if (args.includes('--status') || first === 'status') {
   const { ApiClient } = await import('./api-client.js');
   const { getOrCreateInstallId } = await import('./state.js');
+  const { cleanText: t } = await import('./untrusted.js');
   try {
     const client = new ApiClient(process.env.TFG_API_KEY || 'public', { version: pkg.version, installId: getOrCreateInstallId() });
     const status = await client.getStatus();
     console.log('\nTokens for Good - Project Status\n');
-    console.log(`Total orgs: ${status.total_orgs ?? 'n/a'}`);
-    console.log(`Pending research: ${status.pending_orgs ?? 'n/a'}`);
-    console.log(`Active contributors (7d): ${status.active_contributors_7d ?? 'n/a'}`);
+    console.log(`Total orgs: ${t(status.total_orgs ?? 'n/a', 20)}`);
+    console.log(`Pending research: ${t(status.pending_orgs ?? 'n/a', 20)}`);
+    console.log(`Active contributors (7d): ${t(status.active_contributors_7d ?? 'n/a', 20)}`);
     console.log('\nQueue:');
     for (const [k, v] of Object.entries(status.queue || {})) {
-      console.log(`  ${k}: ${v}`);
+      console.log(`  ${t(k, 40)}: ${t(v, 20)}`);
     }
     console.log('\nTop Contributors:');
     (status.top_contributors || []).forEach((c, i) => {
-      const name = c.display_name || 'anonymous';
-      console.log(`  ${i + 1}. ${name} (${c.total_orgs} orgs, ${c.tier})`);
+      const name = t(c.display_name || 'anonymous', 50);
+      console.log(`  ${i + 1}. ${name} (${t(c.total_orgs, 20)} orgs, ${t(c.tier, 20)})`);
     });
   } catch (err) {
     console.error('Error:', err.message);
+    process.exitCode = 1;
   }
 } else if (args.includes('--impact') || first === 'impact') {
   const { ApiClient } = await import('./api-client.js');
   const { getOrCreateInstallId } = await import('./state.js');
+  const { cleanText: t } = await import('./untrusted.js');
   try {
     const client = new ApiClient(process.env.TFG_API_KEY, { version: pkg.version, installId: getOrCreateInstallId() });
     const result = await client.getImpact();
-    const c = result.contributor;
-    console.log(`\nYour Impact (@${c.github_handle})\n`);
-    console.log(`Tier: ${c.tier}`);
-    console.log(`Orgs researched: ${c.total_orgs}`);
-    console.log(`Acceptance rate: ${c.acceptance_rate}%`);
+    const c = result?.contributor || {};
+    console.log(`\nYour Impact (${t(c.github_handle ? '@' + c.github_handle : (c.display_name || 'you'), 60)})\n`);
+    console.log(`Tier: ${t(c.tier, 20)}`);
+    console.log(`Orgs researched: ${t(c.total_orgs, 20)}`);
+    console.log(`Acceptance rate: ${t(c.acceptance_rate, 20)}%`);
     console.log(`Automation: ${c.has_schedule ? 'Active' : 'Not set up'}`);
   } catch (err) {
     console.error('Error:', err.message);
+    process.exitCode = 1;
   }
 } else if (args.length === 0 || args.includes('--mcp')) {
   // Default: start the MCP server. This is how the editor's MCP client launches us
