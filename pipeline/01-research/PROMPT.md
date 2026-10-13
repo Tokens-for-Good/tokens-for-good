@@ -116,6 +116,8 @@ Documented program changes based on evidence. "They adapted" needs specifics: wh
 
 The score is computed deterministically by code from this table, not by you. Leave a row blank if you didn't find supporting evidence; a blank row is the honest answer when the org doesn't have that thing. Inventing evidence will lower the org's real score and may get the report rejected.
 
+**Before you fill the table, do this:** list every change, adaptation or stated goal you wrote in Sections 6 and 7 and PROMPT 4, then file each one as a table row with its quote and URL. A row you can fill and leave blank is the single largest way a report loses points.
+
 **What each row asks for** (read this before filling in the table):
 
 - **a1:** A stated condition-level outcome goal (health, income, wellbeing, food security, survival). NOT activity-level ("train X people") and NOT access-level ("expand financial access"); those are intermediary.
@@ -142,13 +144,13 @@ The score is computed deterministically by code from this table, not by you. Lea
 - **Use exactly these four columns in this order: `Row | Quote | URL | Name`.** Do not add a "Definition" or "What to quote" column, and do not bundle the URL inside the quote cell; the score is parsed from these columns, so a different layout can zero out real evidence.
 - The quoted text must appear verbatim on the cited page. A separate fact-check pass verifies your quotes against the page bodies after submission; invented or paraphrased quotes get the report flagged.
 - Use the real URL of the specific page that contains the quote. Not the org homepage. Not `example.com`.
-- For a2 and a3, the number/percentage (a2) and the population + year (a3) must appear **inside the quoted text:** that's what the scorer reads. Reusing the a1 quote is fine if it already contains them; a number or year that only appears elsewhere in your prose does not count.
+- **a1 carries the whole goals criterion.** A quote of the org's own condition-level goal scores it in full; the scorer does not require a number or a target year. Fill a2 and a3 when the evidence carries them (a reviewer reads them), and the number/percentage (a2) and the population + year (a3) must appear **inside the quoted text**, reusing the a1 quote if it already contains them. Never hold a1 back because you could not find a year.
 - A blank row is the correct answer when the evidence doesn't exist. Do not invent.
 - One row, one quote, one URL. Don't bundle two facts under one citation.
 - **Two or three quotes can back one row.** When two distinct quotes (or two different sources) support the same row, add a second line with the same row key, up to three lines per key, one quote and one URL per line, each still verbatim. The server scores the row on its best line, checks every line against its page separately, and drops a line that fails verification on its own, so the row keeps its other quotes. Lines beyond the third are ignored.
 - For e and f: if the design is "self-reported survey of current borrowers" or "before/after with no comparison group", leave the row blank. Those are not counterfactual evidence.
 - **Transcribe your findings.** Every row your PROMPT 4/5 worksheet or summary sections support MUST be filled. A blank row means you genuinely found nothing, NOT that you forgot to copy it across. The score reads ONLY this table, so evidence left in your prose scores zero. This is the #1 way good research loses its score.
-- **A submit-time lint will reject the report (your claim stays active; fix and resubmit) if a counterfactual row e/f quotes a result instead of a study design, or an adaptation row d states tenure instead of a documented change.**
+- **A filled row is never rejected for being weak.** The submit-time lint blocks only a table that is broken, above all one with every row blank. When a filled row will score zero (a counterfactual row e/f quoting a result instead of a study design, an adaptation row d stating tenure instead of a documented change), the submit is accepted and the lint returns the reason as a warning. Leave the row as filed; a quote a reviewer can read beats an empty cell. Blank means you genuinely found nothing.
 
 **Worked examples:**
 - Row e/f; WRONG (scores zero): `e | "graduates earned 32% more than non-graduates" | url`; a result with no comparison design. RIGHT (scores): `e | "In a randomized controlled trial the treatment group earned 32% more than the control group (N=676, p=0.01)" | url`; names the RCT/control design.
@@ -187,8 +189,9 @@ Run these checks before submitting. They are not optional.
 - [ ] EVIDENCE TABLE has all 8 rows (a1, a2, a3, b, c, d, e, f); values may be blank where no evidence was found
 - [ ] A row with more than one supporting quote uses one line per quote (same row key, at most three lines), each verbatim with its own URL
 - [ ] Every EVIDENCE TABLE row your worksheet/summary supports is FILLED (blank = genuinely no evidence, not un-transcribed)
-- [ ] Counterfactual rows e/f quote the study DESIGN (RCT / control / comparison), not the result
-- [ ] Adaptation row d shows what CHANGED based on data, not just how long the program has run
+- [ ] Counterfactual rows e/f quote the study DESIGN (RCT / control / comparison), not the result, where the org published one; a design-free quote still gets filed, it just scores zero
+- [ ] Adaptation row d shows what CHANGED based on data, not just how long the program has run; a weaker change quote still gets filed rather than blanked
+- [ ] Row a1 carries the org's own condition-level goal; it scores in full without a number or a target year
 - [ ] SOURCES section lists every URL cited inline
 
 **Citations:**
@@ -209,4 +212,4 @@ Run these checks before submitting. They are not optional.
 
 Submit using `submit_report` with the full markdown as `report_markdown`. Set `prompt_version` to `"v3"`. Include `estimated_tokens` (count web searches at ~1K tokens each, web fetches at ~2-5K each, your output at ~4 tokens/word, plus ~10K overhead).
 
-If `submit_report` returns `lint_errors`, your claim is still active: fix the flagged EVIDENCE TABLE rows and call `submit_report` again. This is expected, not a failure; do not abandon the run.
+If `submit_report` returns `lint_errors`, your claim is still active: the table itself is broken (usually every row blank), so transcribe what you found into the matching rows and call `submit_report` again. This is expected, not a failure; do not abandon the run. A filled row is never rejected for being weak. When a row rates zero, the submit is accepted and the reason comes back as a warning, so leave the row as filed.
