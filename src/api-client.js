@@ -100,7 +100,20 @@ export class ApiClient {
     // Tolerate empty bodies (204 No Content, used by /research/consolidate/next
     // when nothing is assigned to you); response.json() throws on empty text.
     const text = await response.text();
-    const data = text ? JSON.parse(text) : null;
+    // A proxy or load balancer error page (HTML 502/503) is not JSON; report
+    // the status rather than a bare SyntaxError that hides it.
+    let data = null;
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        if (response.ok) {
+          const error = new Error(`API returned a non-JSON response (HTTP ${response.status})`);
+          error.status = response.status;
+          throw error;
+        }
+      }
+    }
 
     if (!response.ok) {
       const error = new Error((data && (data.error || data.message)) || `API error ${response.status}`);

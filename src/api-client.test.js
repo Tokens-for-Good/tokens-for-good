@@ -268,3 +268,25 @@ test('a cross-origin redirect from the API is an error and the key never reaches
     await attacker.close();
   }
 });
+
+test('request() reports the HTTP status when an error body is not JSON (proxy 502 page)', async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => new Response('<html>Bad Gateway</html>', { status: 502 });
+  try {
+    const client = new ApiClient('tfg_test_key');
+    await assert.rejects(client.getImpact(), (err) => err.status === 502 && /API error 502/.test(err.message));
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test('request() names a non-JSON 200 body instead of throwing a SyntaxError', async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = async () => new Response('<html>captive portal</html>', { status: 200 });
+  try {
+    const client = new ApiClient('tfg_test_key');
+    await assert.rejects(client.getImpact(), (err) => err.status === 200 && /non-JSON response/.test(err.message));
+  } finally {
+    globalThis.fetch = original;
+  }
+});
